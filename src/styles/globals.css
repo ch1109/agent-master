@@ -1,0 +1,261 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ===== 背景层级 ===== */
+    --bg-base: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-secondary: #fafafa;
+    --bg-overlay: #ffffff;
+    --bg-hover: #f5f5f5;
+    --bg-active: #ebebeb;
+
+    /* ===== 边框 ===== */
+    --border-subtle: rgba(0, 0, 0, 0.04);
+    --border-default: rgba(0, 0, 0, 0.06);
+    --border-strong: rgba(0, 0, 0, 0.1);
+
+    /* ===== 文字 ===== */
+    --text-primary: #1a1a1a;
+    --text-secondary: #666666;
+    --text-tertiary: #999999;
+    --text-disabled: #c0c0c0;
+    --text-placeholder: #a3a3a3;
+
+    /* ===== 主色 - 克制的蓝 ===== */
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-primary-muted: rgba(59, 130, 246, 0.1);
+    --color-primary-border: rgba(59, 130, 246, 0.3);
+
+    /* ===== 语义色 ===== */
+    --color-success: #22c55e;
+    --color-success-muted: rgba(34, 197, 94, 0.1);
+    --color-warning: #eab308;
+    --color-warning-muted: rgba(234, 179, 8, 0.1);
+    --color-error: #ef4444;
+    --color-error-muted: rgba(239, 68, 68, 0.1);
+    --color-info: #3b82f6;
+    --color-info-muted: rgba(59, 130, 246, 0.1);
+
+    /* ===== AI 专属色 ===== */
+    --color-ai-thinking: #8b5cf6;
+    --color-ai-executing: #3b82f6;
+    --color-ai-success: #22c55e;
+    --color-ai-highlight: rgba(59, 130, 246, 0.15);
+
+    /* ===== 字号 ===== */
+    --text-xs: 0.75rem;
+    --text-sm: 0.8125rem;
+    --text-base: 0.875rem;
+    --text-lg: 1rem;
+    --text-xl: 1.125rem;
+    --text-2xl: 1.25rem;
+
+    /* ===== 字重 ===== */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+
+    /* ===== 间距 ===== */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    /* ===== 圆角 ===== */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-pill: 999px;
+    --radius: 0.5rem;
+
+    /* ===== 时长 ===== */
+    --duration-instant: 50ms;
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+    --duration-slower: 600ms;
+    --duration-typing: 30ms;
+    --duration-highlight: 1000ms;
+    --duration-thinking: 2000ms;
+
+    /* ===== 缓动 ===== */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ===== shadcn/ui 兼容变量 ===== */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 217 91% 60%;
+  }
+
+  * {
+    @apply border-[var(--border-default)];
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-[var(--bg-base)] text-[var(--text-primary)];
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: var(--text-base);
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  /* 滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+  }
+}
+
+/* ===== 通用工具类 ===== */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* ===== 可拖拽分隔线样式 ===== */
+.resize-handle {
+  width: 1px;
+  background: var(--border-subtle);
+  position: relative;
+  transition: background var(--duration-fast);
+  cursor: col-resize;
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle[data-resize-handle-state="hover"],
+.resize-handle[data-resize-handle-state="drag"] {
+  background: var(--color-primary);
+}
+
+.resize-handle[data-resize-handle-state="drag"] {
+  background: var(--color-primary);
+}
+
+/* ===== AI 思考动画 ===== */
+@keyframes thinking-pulse {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-thinking {
+  animation: thinking-pulse 1.4s ease-in-out infinite;
+}
+
+/* ===== AI 字段填充高亮动画 ===== */
+@keyframes ai-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    background-color: transparent;
+  }
+}
+
+.ai-highlight {
+  animation: ai-highlight-pulse 1s ease-out;
+  border-radius: 8px;
+  padding: 4px;
+  margin: -4px;
+}
+
+/* ===== 进度条光泽动画 ===== */
+@keyframes progress-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: progress-shine 1.5s ease-in-out infinite;
+}
+
