@@ -22,7 +22,12 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/config/intent" replace />,
+    element: <Navigate to="/home/agent" replace />,
+  },
+  // 首页
+  {
+    path: '/home/agent',
+    element: <PageWrapper><PlaceholderPage title="虚拟人 Agent 首页" description="总览虚拟人 Agent 状态与快捷入口" /></PageWrapper>,
   },
   // 配置管理
   {
@@ -71,6 +76,26 @@ export const router = createBrowserRouter([
     element: <PageWrapper><PromptDetailPage /></PageWrapper>,
   },
   {
+    path: '/playground/prompt/test',
+    element: <PageWrapper><PlaceholderPage title="提示词测试" description="创建并运行提示词测试集" /></PageWrapper>,
+  },
+  {
+    path: '/playground/fewshot/library',
+    element: <PageWrapper><PlaceholderPage title="示例库管理" description="集中管理 Few-shot 示例库" /></PageWrapper>,
+  },
+  {
+    path: '/playground/prompt/version',
+    element: <PageWrapper><PlaceholderPage title="提示词版本管理" description="管理提示词版本与发布" /></PageWrapper>,
+  },
+  {
+    path: '/playground/prompt/version/compare',
+    element: <PageWrapper><PlaceholderPage title="版本对比" description="对比不同提示词版本差异" /></PageWrapper>,
+  },
+  {
+    path: '/playground/prompt/version/publish',
+    element: <PageWrapper><PlaceholderPage title="版本发布管理" description="发布与审核提示词版本" /></PageWrapper>,
+  },
+  {
     path: '/playground/test',
     element: <PageWrapper><TestCasePage /></PageWrapper>,
   },
@@ -80,12 +105,46 @@ export const router = createBrowserRouter([
   },
   // 运行监控
   {
-    path: '/monitor/dashboard',
-    element: <PageWrapper><PlaceholderPage title="会话监控" description="实时监控 Agent 会话状态" /></PageWrapper>,
+    path: '/monitor/overview',
+    element: <PageWrapper><PlaceholderPage title="会话总览仪表盘" description="总览关键会话指标" /></PageWrapper>,
   },
   {
     path: '/monitor/logs',
-    element: <PageWrapper><PlaceholderPage title="日志查询" description="查询和分析运行日志" /></PageWrapper>,
+    element: <PageWrapper><PlaceholderPage title="会话日志查询" description="查询和分析会话日志" /></PageWrapper>,
+  },
+  {
+    path: '/monitor/performance',
+    element: <PageWrapper><PlaceholderPage title="性能监控" description="监控性能指标与资源使用" /></PageWrapper>,
+  },
+  // Agent 管理
+  {
+    path: '/agent/create',
+    element: <PageWrapper><PlaceholderPage title="Agent 创建与配置" description="创建并配置 Agent 能力" /></PageWrapper>,
+  },
+  {
+    path: '/agent/deploy',
+    element: <PageWrapper><PlaceholderPage title="Agent 部署管理" description="部署并管理 Agent 运行环境" /></PageWrapper>,
+  },
+  {
+    path: '/agent/monitor',
+    element: <PageWrapper><PlaceholderPage title="Agent 监控" description="监控 Agent 状态与健康" /></PageWrapper>,
+  },
+  // 系统配置
+  {
+    path: '/system/llm',
+    element: <PageWrapper><PlaceholderPage title="LLM 模型配置" description="配置与管理 LLM 模型" /></PageWrapper>,
+  },
+  {
+    path: '/system/api',
+    element: <PageWrapper><PlaceholderPage title="API 配置" description="管理 API 接入与凭证" /></PageWrapper>,
+  },
+  {
+    path: '/system/alert',
+    element: <PageWrapper><PlaceholderPage title="告警配置" description="配置告警策略与通知" /></PageWrapper>,
+  },
+  {
+    path: '/system/tool',
+    element: <PageWrapper><PlaceholderPage title="工具配置" description="配置系统可用的工具与插件" /></PageWrapper>,
   },
   // 系统设置
   {

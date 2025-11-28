@@ -5,8 +5,16 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { mockPrompts } from '@/data/promptMockData'
+import { mockPrompts, promptDiff } from '@/data/promptMockData'
 import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 const modeCards = [
   {
@@ -41,7 +49,7 @@ export function PromptOptimizePage() {
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(mockPrompts[0]?.id || null)
   const [searchValue, setSearchValue] = useState('')
   const projects = [
-    { id: 'bank', name: '重庆银行信用卡导航助手', promptIds: mockPrompts.map(p => p.id) },
+    { id: 'bank', name: 'XX 银行信用卡导航助手', promptIds: mockPrompts.map(p => p.id) },
     { id: 'insurance', name: '保险智能助手', promptIds: [] },
   ]
   const [selectedProject, setSelectedProject] = useState(projects[0]?.id || '')
@@ -60,6 +68,8 @@ export function PromptOptimizePage() {
     if (!selectedMode || !selectedPrompt) return
     navigate(`/playground/prompt/optimize/${selectedMode}?prompt=${selectedPrompt}`)
   }
+
+  const currentPromptContent = currentPrompt?.content || promptDiff.oldPrompt
 
   return (
     <div className="h-full flex flex-col">
@@ -85,8 +95,8 @@ export function PromptOptimizePage() {
             <CardDescription>切换项目可查看对应提示词列表</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+              <div className="sm:w-64">
                 <p className="text-sm text-[var(--text-secondary)] mb-1">项目</p>
                 <select
                   className="w-full border rounded-md px-3 py-2 text-sm bg-[var(--bg-surface)]"
@@ -98,7 +108,8 @@ export function PromptOptimizePage() {
                   ))}
                 </select>
               </div>
-              <div className="col-span-2 relative">
+              <div className="flex-1 relative">
+                <p className="text-sm text-[var(--text-secondary)] mb-1 sm:opacity-0 sm:block">搜索提示词</p>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                 <Input
                   value={searchValue}
@@ -135,11 +146,30 @@ export function PromptOptimizePage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="flex flex-col gap-2 items-start">
+            <div className="flex items-center gap-3">
               <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
-              当前提示词信息
-            </CardTitle>
+              <CardTitle className="text-base">当前提示词信息</CardTitle>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]"
+                  >
+                    查看完整提示词
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>完整提示词</DialogTitle>
+                    <DialogDescription>当前选中提示词的完整内容（示例数据）</DialogDescription>
+                  </DialogHeader>
+                  <div className="max-h-[480px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-6">
+                    {currentPromptContent}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-4">
             <div>
@@ -155,10 +185,10 @@ export function PromptOptimizePage() {
             </div>
             <div>
               <p className="text-sm text-[var(--text-secondary)]">当前通过率</p>
-              <p className="font-semibold text-[var(--text-primary)] mt-1">
-                {currentPrompt?.passRate ?? '--'}%
-                <Badge variant="secondary" className="ml-2">目标 90%</Badge>
-              </p>
+              <div className="font-semibold text-[var(--text-primary)] mt-1 flex items-center gap-2">
+                <span>{currentPrompt?.passRate ?? '--'}%</span>
+                <Badge variant="secondary">目标 90%</Badge>
+              </div>
             </div>
             <div>
               <p className="text-sm text-[var(--text-secondary)]">关联意图</p>

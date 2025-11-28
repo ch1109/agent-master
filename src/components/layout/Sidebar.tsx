@@ -9,6 +9,13 @@ import {
   Bot,
   ChevronDown,
   Sparkles,
+  Home,
+  Gauge,
+  Shield,
+  Cpu,
+  Sliders,
+  AlertCircle,
+  Wrench,
 } from 'lucide-react'
 
 // 导航菜单项类型
@@ -28,6 +35,12 @@ interface NavGroup {
 // 导航菜单配置
 const navGroups: NavGroup[] = [
   {
+    title: '首页',
+    items: [
+      { id: 'home-agent', label: '虚拟人 Agent 首页', icon: Home, href: '/home/agent', badge: '开发中' },
+    ],
+  },
+  {
     title: '配置管理',
     items: [
       { id: 'intent', label: '意图配置', icon: MessageSquare, href: '/config/intent' },
@@ -40,6 +53,9 @@ const navGroups: NavGroup[] = [
     title: 'Playground',
     items: [
       { id: 'prompt', label: '提示词优化', icon: Sparkles, href: '/playground/prompt' },
+      { id: 'prompt-test', label: '提示词测试', icon: Gauge, href: '/playground/prompt/test', badge: '开发中' },
+      { id: 'fewshot-library', label: 'Few-shot 示例库', icon: FileText, href: '/playground/fewshot/library', badge: '开发中' },
+      { id: 'prompt-version', label: '提示词版本管理', icon: Shield, href: '/playground/prompt/version', badge: '开发中' },
       { id: 'test', label: '测试用例', icon: Settings2, href: '/playground/test', badge: '开发中' },
       { id: 'badcase', label: 'Badcase 管理', icon: Activity, href: '/playground/badcase', badge: '开发中' },
     ],
@@ -47,8 +63,26 @@ const navGroups: NavGroup[] = [
   {
     title: '运行监控',
     items: [
-      { id: 'dashboard', label: '会话监控', icon: Activity, href: '/monitor/dashboard', badge: '开发中' },
-      { id: 'logs', label: '日志查询', icon: FileText, href: '/monitor/logs', badge: '开发中' },
+      { id: 'overview', label: '会话总览仪表盘', icon: Gauge, href: '/monitor/overview', badge: '开发中' },
+      { id: 'logs', label: '会话日志查询', icon: FileText, href: '/monitor/logs', badge: '开发中' },
+      { id: 'performance', label: '性能监控', icon: Gauge, href: '/monitor/performance', badge: '开发中' },
+    ],
+  },
+  {
+    title: 'Agent 管理',
+    items: [
+      { id: 'agent-create', label: 'Agent 创建与配置', icon: Bot, href: '/agent/create', badge: '开发中' },
+      { id: 'agent-deploy', label: 'Agent 部署管理', icon: Shield, href: '/agent/deploy', badge: '开发中' },
+      { id: 'agent-monitor', label: 'Agent 监控', icon: Activity, href: '/agent/monitor', badge: '开发中' },
+    ],
+  },
+  {
+    title: '系统配置',
+    items: [
+      { id: 'system-llm', label: 'LLM 模型配置', icon: Sliders, href: '/system/llm', badge: '开发中' },
+      { id: 'system-api', label: 'API 配置', icon: Cpu, href: '/system/api', badge: '开发中' },
+      { id: 'system-alert', label: '告警配置', icon: AlertCircle, href: '/system/alert', badge: '开发中' },
+      { id: 'system-tool', label: '工具配置', icon: Wrench, href: '/system/tool', badge: '开发中' },
     ],
   },
 ]
@@ -56,7 +90,7 @@ const navGroups: NavGroup[] = [
 export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const currentProject = '重庆银行智能助手'
+  const currentProject = 'XX银行项目'
 
   const isActive = (href: string) => location.pathname === href
 
@@ -137,4 +171,3 @@ export function Sidebar() {
 }
 
 export default Sidebar
-

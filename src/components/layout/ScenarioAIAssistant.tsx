@@ -356,6 +356,21 @@ export function ScenarioAIAssistant() {
     setUseRealAI(prev => !prev)
   }, [])
 
+  // 处理来自业务区域的自动发送指令
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ text?: string }>
+      const text = customEvent.detail?.text
+      if (!text) return
+      handleSend(text)
+    }
+
+    window.addEventListener('ai-assistant-send', handler as EventListener)
+    return () => {
+      window.removeEventListener('ai-assistant-send', handler as EventListener)
+    }
+  }, [handleSend])
+
   return (
     <div className="h-full flex flex-col bg-[var(--bg-elevated)] border-l border-[var(--border-subtle)]">
       {/* 头部 */}
@@ -442,4 +457,3 @@ export function ScenarioAIAssistant() {
 }
 
 export default ScenarioAIAssistant
-

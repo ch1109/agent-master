@@ -93,7 +93,7 @@ export function MessageBubble({ message, onOptionSelect, onActionClick }: Messag
             "px-4 py-3 text-sm",
             isAssistant
               ? "bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-tl-sm rounded-tr-xl rounded-br-xl rounded-bl-xl text-[var(--text-primary)] shadow-sm"
-              : "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] rounded-tl-xl rounded-tr-sm rounded-br-xl rounded-bl-xl text-white shadow-md"
+              : "bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-tl-xl rounded-tr-sm rounded-br-xl rounded-bl-xl text-[var(--text-primary)] shadow-md"
           )}>
             <FormattedText text={content.text} isStreaming={isStreaming} />
           </div>
@@ -343,4 +343,3 @@ function SummaryCard({ sections }: { sections: { title: string; items: { label: 
 }
 
 export default MessageBubble
-
