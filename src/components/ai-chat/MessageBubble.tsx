@@ -1,12 +1,16 @@
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Bot, User, Check, CheckCircle2, Circle, Loader2, AlertCircle, ChevronRight, Sparkles } from 'lucide-react'
 import { Message, OptionItem, ProgressStage, ActionButton } from './types'
 import { Button } from '@/components/ui/button'
+import { useStreamingText } from '@/hooks/useStreamingText'
 
 interface MessageBubbleProps {
   message: Message
   onOptionSelect?: (optionId: string) => void
   onActionClick?: (actionId: string) => void
+  /** 是否启用流式文本效果(默认true) */
+  enableStreaming?: boolean
 }
 
 // 解析格式化文本，识别标题、分隔线等
@@ -66,9 +70,38 @@ function FormattedText({ text, isStreaming }: { text: string; isStreaming?: bool
   )
 }
 
-export function MessageBubble({ message, onOptionSelect, onActionClick }: MessageBubbleProps) {
-  const { role, content, isStreaming } = message
+export function MessageBubble({ message, onOptionSelect, onActionClick, enableStreaming = false }: MessageBubbleProps) {
+  const { role, content, isStreaming: isRealTimeStreaming, id } = message
   const isAssistant = role === 'assistant'
+
+  // 用于流式文本渲染的状态
+  const [textStreamComplete, setTextStreamComplete] = useState(false)
+
+  // 当消息ID变化时,重置流式状态
+  useEffect(() => {
+    setTextStreamComplete(false)
+  }, [id])
+
+  // 只对助手消息且有文本内容时启用流式效果
+  const shouldStream = enableStreaming && isAssistant && content.text && !isRealTimeStreaming
+
+  // 使用流式文本Hook
+  const { displayedText, isComplete } = useStreamingText({
+    text: content.text || '',
+    enabled: shouldStream,
+    tokensPerSecond: 30,
+    onComplete: () => {
+      setTextStreamComplete(true)
+    },
+  })
+
+  // 决定是否显示UI组件(选项、按钮等)
+  // 1. 如果不启用流式,直接显示
+  // 2. 如果启用流式,等文本渲染完成后再显示
+  const shouldShowUIComponents = !shouldStream || textStreamComplete || isComplete
+
+  // 决定显示的文本内容
+  const textToDisplay = shouldStream ? displayedText : content.text
 
   return (
     <div className={cn("flex gap-3", !isAssistant && "flex-row-reverse")}>
@@ -88,34 +121,34 @@ export function MessageBubble({ message, onOptionSelect, onActionClick }: Messag
       {/* 消息内容 */}
       <div className={cn("max-w-[90%] space-y-3", !isAssistant && "items-end")}>
         {/* 文本内容 */}
-        {content.text && (
+        {textToDisplay && (
           <div className={cn(
             "px-4 py-3 text-sm",
             isAssistant
               ? "bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-tl-sm rounded-tr-xl rounded-br-xl rounded-bl-xl text-[var(--text-primary)] shadow-sm"
               : "bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-tl-xl rounded-tr-sm rounded-br-xl rounded-bl-xl text-[var(--text-primary)] shadow-md"
           )}>
-            <FormattedText text={content.text} isStreaming={isStreaming} />
+            <FormattedText text={textToDisplay} isStreaming={shouldStream && !isComplete} />
           </div>
         )}
 
-        {/* 选项卡片 */}
-        {content.options && content.options.length > 0 && (
+        {/* 选项卡片 - 只在流式渲染完成后显示 */}
+        {shouldShowUIComponents && content.options && content.options.length > 0 && (
           <OptionsCard options={content.options} onSelect={onOptionSelect} />
         )}
 
-        {/* 进度条 */}
-        {content.stages && content.stages.length > 0 && (
+        {/* 进度条 - 只在流式渲染完成后显示 */}
+        {shouldShowUIComponents && content.stages && content.stages.length > 0 && (
           <ProgressCard stages={content.stages} />
         )}
 
-        {/* 方案总结 */}
-        {content.summary && content.summary.length > 0 && (
+        {/* 方案总结 - 只在流式渲染完成后显示 */}
+        {shouldShowUIComponents && content.summary && content.summary.length > 0 && (
           <SummaryCard sections={content.summary} />
         )}
 
-        {/* 操作按钮 */}
-        {content.actions && content.actions.length > 0 && (
+        {/* 操作按钮 - 只在流式渲染完成后显示 */}
+        {shouldShowUIComponents && content.actions && content.actions.length > 0 && (
           <ActionsBar actions={content.actions} onClick={onActionClick} />
         )}
       </div>

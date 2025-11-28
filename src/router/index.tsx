@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
 import {
+  AgentHomePage,
   IntentConfigPage,
   IntentDetailPage,
   UIConfigPage,
@@ -15,8 +16,8 @@ import {
 } from '@/pages'
 
 // 包装页面组件，添加布局
-function PageWrapper({ children }: { children: React.ReactNode }) {
-  return <AppLayout>{children}</AppLayout>
+function PageWrapper({ children, showAssistant = true }: { children: React.ReactNode, showAssistant?: boolean }) {
+  return <AppLayout showAssistant={showAssistant}>{children}</AppLayout>
 }
 
 export const router = createBrowserRouter([
@@ -27,7 +28,7 @@ export const router = createBrowserRouter([
   // 首页
   {
     path: '/home/agent',
-    element: <PageWrapper><PlaceholderPage title="虚拟人 Agent 首页" description="总览虚拟人 Agent 状态与快捷入口" /></PageWrapper>,
+    element: <PageWrapper showAssistant={false}><AgentHomePage /></PageWrapper>,
   },
   // 配置管理
   {

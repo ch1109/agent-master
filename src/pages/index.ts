@@ -1,5 +1,8 @@
 // 页面导出入口
 
+// 首页
+export { AgentHomePage } from './home/AgentHomePage'
+
 // 配置管理
 export { IntentConfigPage } from './config/IntentConfigPage'
 export { IntentDetailPage } from './config/IntentDetailPage'
