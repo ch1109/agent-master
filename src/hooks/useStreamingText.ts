@@ -16,14 +16,15 @@ export interface UseStreamingTextOptions {
  * 模拟打字机效果,按照指定速度逐字符显示文本
  */
 export function useStreamingText(options: UseStreamingTextOptions) {
-  const { text, enabled = true, tokensPerSecond = 30, onComplete } = options
+  const { text, enabled = true, tokensPerSecond = 40, onComplete } = options
 
-  const [displayedText, setDisplayedText] = useState(() => enabled ? '' : text)
+  const [displayedText, setDisplayedText] = useState(text)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [isComplete, setIsComplete] = useState(() => !enabled)
+  const [isComplete, setIsComplete] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const indexRef = useRef(0)
   const onCompleteRef = useRef(onComplete)
+  const hasStartedRef = useRef(false)
 
   // 保持 onComplete 引用最新
   useEffect(() => {
@@ -36,6 +37,7 @@ export function useStreamingText(options: UseStreamingTextOptions) {
       setDisplayedText(text)
       setIsComplete(true)
       setIsStreaming(false)
+      hasStartedRef.current = false
       onCompleteRef.current?.()
       return
     }
@@ -46,23 +48,26 @@ export function useStreamingText(options: UseStreamingTextOptions) {
       setIsStreaming(false)
       setIsComplete(false)
       indexRef.current = 0
+      hasStartedRef.current = false
       return
     }
-
-    // 重置状态
-    setDisplayedText('')
-    setIsStreaming(true)
-    setIsComplete(false)
-    indexRef.current = 0
-
-    // 计算每个字符的延迟时间(毫秒)
-    // 30 tokens/秒 = 1000ms / 30 ≈ 33ms 每个token
-    const delayPerChar = 1000 / tokensPerSecond
 
     // 清除之前的计时器
     if (timerRef.current) {
       clearInterval(timerRef.current)
+      timerRef.current = null
     }
+
+    // 重置状态并开始流式渲染
+    setDisplayedText('')
+    setIsStreaming(true)
+    setIsComplete(false)
+    indexRef.current = 0
+    hasStartedRef.current = true
+
+    // 计算每个字符的延迟时间(毫秒)
+    // 30 tokens/秒 = 1000ms / 30 ≈ 33ms 每个token
+    const delayPerChar = 1000 / tokensPerSecond
 
     // 创建新的流式渲染计时器
     timerRef.current = setInterval(() => {

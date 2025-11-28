@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { Bot, User, Check, CheckCircle2, Circle, Loader2, AlertCircle, ChevronRight, Sparkles } from 'lucide-react'
 import { Message, OptionItem, ProgressStage, ActionButton } from './types'
@@ -70,41 +70,125 @@ function FormattedText({ text, isStreaming }: { text: string; isStreaming?: bool
   )
 }
 
-export function MessageBubble({ message, onOptionSelect, onActionClick, enableStreaming = false }: MessageBubbleProps) {
+export function MessageBubble({ message, onOptionSelect, onActionClick, enableStreaming = true }: MessageBubbleProps) {
   const { role, content, isStreaming: isRealTimeStreaming, id } = message
   const isAssistant = role === 'assistant'
 
   // 用于流式文本渲染的状态
   const [textStreamComplete, setTextStreamComplete] = useState(false)
+  // 用于控制UI组件按顺序显示的状态
+  const [showOptions, setShowOptions] = useState(false)
+  const [showStages, setShowStages] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
+  const [showActions, setShowActions] = useState(false)
 
-  // 当消息ID变化时,重置流式状态
+  // 消息容器的ref,用于自动滚动
+  const messageRef = useRef<HTMLDivElement>(null)
+
+  // 当消息ID变化时,重置所有流式状态
   useEffect(() => {
     setTextStreamComplete(false)
+    setShowOptions(false)
+    setShowStages(false)
+    setShowSummary(false)
+    setShowActions(false)
   }, [id])
 
   // 只对助手消息且有文本内容时启用流式效果
   const shouldStream = enableStreaming && isAssistant && content.text && !isRealTimeStreaming
 
   // 使用流式文本Hook
-  const { displayedText, isComplete } = useStreamingText({
+  const { displayedText, isComplete, isStreaming } = useStreamingText({
     text: content.text || '',
     enabled: shouldStream,
-    tokensPerSecond: 30,
+    tokensPerSecond: 40,
     onComplete: () => {
       setTextStreamComplete(true)
     },
   })
 
-  // 决定是否显示UI组件(选项、按钮等)
-  // 1. 如果不启用流式,直接显示
-  // 2. 如果启用流式,等文本渲染完成后再显示
-  const shouldShowUIComponents = !shouldStream || textStreamComplete || isComplete
+  // 按顺序显示UI组件
+  useEffect(() => {
+    if (!shouldStream || !textStreamComplete) {
+      // 如果不需要流式或文本未完成,直接显示所有组件
+      if (!shouldStream) {
+        setShowOptions(true)
+        setShowStages(true)
+        setShowSummary(true)
+        setShowActions(true)
+      }
+      return
+    }
+
+    // 文本完成后,按顺序显示UI组件 (速度放慢2倍)
+    const timers: NodeJS.Timeout[] = []
+    let cumulativeDelay = 2000 // 文本完成后等待2000ms (原1000ms的2倍)
+
+    // 显示选项
+    if (content.options?.length) {
+      timers.push(setTimeout(() => setShowOptions(true), cumulativeDelay))
+      cumulativeDelay += 1200 // 间隔1200ms (原600ms的2倍)
+    } else {
+      setShowOptions(true)
+    }
+
+    // 显示进度条
+    if (content.stages?.length) {
+      timers.push(setTimeout(() => setShowStages(true), cumulativeDelay))
+      cumulativeDelay += 1200 // 间隔1200ms
+    } else {
+      setShowStages(true)
+    }
+
+    // 显示摘要
+    if (content.summary?.length) {
+      timers.push(setTimeout(() => setShowSummary(true), cumulativeDelay))
+      cumulativeDelay += 1200 // 间隔1200ms
+    } else {
+      setShowSummary(true)
+    }
+
+    // 显示操作按钮
+    if (content.actions?.length) {
+      timers.push(setTimeout(() => setShowActions(true), cumulativeDelay))
+    } else {
+      setShowActions(true)
+    }
+
+    // 清理函数
+    return () => {
+      timers.forEach(timer => clearTimeout(timer))
+    }
+  }, [textStreamComplete, shouldStream, content.options, content.stages, content.summary, content.actions])
 
   // 决定显示的文本内容
   const textToDisplay = shouldStream ? displayedText : content.text
 
+  // 流式渲染时自动滚动到当前消息
+  useEffect(() => {
+    if (shouldStream && isStreaming && messageRef.current) {
+      // 使用 smooth 平滑滚动
+      messageRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+        inline: 'nearest'
+      })
+    }
+  }, [displayedText, shouldStream, isStreaming])
+
+  // UI组件显示时也滚动一下
+  useEffect(() => {
+    if ((showOptions || showStages || showSummary || showActions) && messageRef.current) {
+      messageRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+        inline: 'nearest'
+      })
+    }
+  }, [showOptions, showStages, showSummary, showActions])
+
   return (
-    <div className={cn("flex gap-3", !isAssistant && "flex-row-reverse")}>
+    <div ref={messageRef} className={cn("flex gap-3", !isAssistant && "flex-row-reverse")}>
       {/* 头像 */}
       <div className={cn(
         "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
@@ -132,24 +216,32 @@ export function MessageBubble({ message, onOptionSelect, onActionClick, enableSt
           </div>
         )}
 
-        {/* 选项卡片 - 只在流式渲染完成后显示 */}
-        {shouldShowUIComponents && content.options && content.options.length > 0 && (
-          <OptionsCard options={content.options} onSelect={onOptionSelect} />
+        {/* 选项卡片 - 按顺序显示 */}
+        {showOptions && content.options && content.options.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <OptionsCard options={content.options} onSelect={onOptionSelect} />
+          </div>
         )}
 
-        {/* 进度条 - 只在流式渲染完成后显示 */}
-        {shouldShowUIComponents && content.stages && content.stages.length > 0 && (
-          <ProgressCard stages={content.stages} />
+        {/* 进度条 - 按顺序显示 */}
+        {showStages && content.stages && content.stages.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <ProgressCard stages={content.stages} />
+          </div>
         )}
 
-        {/* 方案总结 - 只在流式渲染完成后显示 */}
-        {shouldShowUIComponents && content.summary && content.summary.length > 0 && (
-          <SummaryCard sections={content.summary} />
+        {/* 方案总结 - 按顺序显示 */}
+        {showSummary && content.summary && content.summary.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <SummaryCard sections={content.summary} />
+          </div>
         )}
 
-        {/* 操作按钮 - 只在流式渲染完成后显示 */}
-        {shouldShowUIComponents && content.actions && content.actions.length > 0 && (
-          <ActionsBar actions={content.actions} onClick={onActionClick} />
+        {/* 操作按钮 - 按顺序显示 */}
+        {showActions && content.actions && content.actions.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <ActionsBar actions={content.actions} onClick={onActionClick} />
+          </div>
         )}
       </div>
     </div>
@@ -217,12 +309,49 @@ function OptionsCard({ options, onSelect }: { options: OptionItem[]; onSelect?: 
   )
 }
 
-// 进度卡片组件 - 增强版
+// 进度卡片组件 - 增强版,带动画效果
 function ProgressCard({ stages }: { stages: ProgressStage[] }) {
-  // 计算完成百分比
-  const completedCount = stages.filter(s => s.status === 'completed').length
-  const runningCount = stages.filter(s => s.status === 'running').length
-  const progress = Math.round(((completedCount + runningCount * 0.5) / stages.length) * 100)
+  // 动画状态 - 从pending开始,逐个变为completed
+  const [animatedStages, setAnimatedStages] = useState<ProgressStage[]>(
+    stages.map(stage => ({ ...stage, status: 'pending' as const }))
+  )
+  const [animatedProgress, setAnimatedProgress] = useState(0)
+
+  // 进度动画效果 - 逐个完成阶段 (速度放慢2倍)
+  useEffect(() => {
+    // 重置为全部pending
+    setAnimatedStages(stages.map(stage => ({ ...stage, status: 'pending' as const })))
+    setAnimatedProgress(0)
+
+    // 计算每个阶段的延迟时间 (放慢2倍)
+    const stageDelay = 800 // 每个阶段间隔800ms (原400ms的2倍)
+    const timers: NodeJS.Timeout[] = []
+
+    // 逐个设置阶段为running,然后completed
+    stages.forEach((stage, index) => {
+      // 设置为running
+      const runningTimer = setTimeout(() => {
+        setAnimatedStages(prev =>
+          prev.map((s, i) => i === index ? { ...s, status: 'running' as const } : s)
+        )
+        setAnimatedProgress(Math.round(((index + 0.5) / stages.length) * 100))
+      }, index * stageDelay)
+      timers.push(runningTimer)
+
+      // 设置为completed
+      const completedTimer = setTimeout(() => {
+        setAnimatedStages(prev =>
+          prev.map((s, i) => i === index ? { ...s, status: 'completed' as const } : s)
+        )
+        setAnimatedProgress(Math.round(((index + 1) / stages.length) * 100))
+      }, index * stageDelay + stageDelay / 2)
+      timers.push(completedTimer)
+    })
+
+    return () => {
+      timers.forEach(timer => clearTimeout(timer))
+    }
+  }, [stages])
 
   return (
     <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] overflow-hidden shadow-sm">
@@ -230,12 +359,12 @@ function ProgressCard({ stages }: { stages: ProgressStage[] }) {
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-[var(--text-secondary)]">生成进度</span>
-          <span className="text-xs font-bold text-[var(--color-primary)]">{progress}%</span>
+          <span className="text-xs font-bold text-[var(--color-primary)]">{animatedProgress}%</span>
         </div>
         <div className="h-1.5 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-ai-thinking)] rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
+            className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-ai-thinking)] rounded-full transition-all duration-300"
+            style={{ width: `${animatedProgress}%` }}
           />
         </div>
       </div>
@@ -247,7 +376,7 @@ function ProgressCard({ stages }: { stages: ProgressStage[] }) {
           <div className="absolute left-3 top-6 bottom-6 w-0.5 bg-[var(--border-subtle)]" />
 
           <div className="space-y-4">
-            {stages.map((stage, index) => (
+            {animatedStages.map((stage, index) => (
               <div key={stage.id} className="flex items-start gap-3 relative">
                 {/* 状态图标 */}
                 <div className={cn(
