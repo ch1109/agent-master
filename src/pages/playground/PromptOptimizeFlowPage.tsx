@@ -9,6 +9,7 @@ import { ConfigTextarea } from '@/components/config'
 import { DiffViewer } from '@/components/ui/diff-viewer'
 import { mockPrompts, promptDiff, mockTestCases } from '@/data/promptMockData'
 import { cn } from '@/lib/utils'
+import { useHighlight } from '@/hooks/useHighlight'
 
 type DiagnosisNode = {
   id: string
@@ -89,8 +90,14 @@ const modeLabel: Record<string, string> = {
 }
 
 export function PromptOptimizeFlowPage() {
-  const { mode = '' } = useParams<{ mode: string }>()
+  const { mode: modeParam = '' } = useParams<{ mode: string }>()
   const [searchParams] = useSearchParams()
+  const effectiveMode: 'badcase' | 'diagnose' | 'enhance' | '' = useMemo(() => {
+    const raw = (modeParam || searchParams.get('mode') || 'badcase').toLowerCase()
+    if (raw === 'badcase' || raw === 'diagnose' || raw === 'enhance') return raw as 'badcase' | 'diagnose' | 'enhance'
+    return 'badcase'
+  }, [modeParam, searchParams])
+  const displayModeLabel = modeLabel[effectiveMode] || '提示词优化'
   const navigate = useNavigate()
 
   const promptId = searchParams.get('prompt') || mockPrompts[0]?.id
@@ -105,7 +112,13 @@ export function PromptOptimizeFlowPage() {
     changelog: '修复密码业务歧义识别问题',
   })
   const [hasOptimizedPrompt, setHasOptimizedPrompt] = useState(false)
+  const [autoSyncAt, setAutoSyncAt] = useState<string>('')
+  const [highlightedTags, setHighlightedTags] = useState<string[]>([])
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([])
+  const [aiGeneratedContent, setAiGeneratedContent] = useState<string>('')
+
+  // 使用 useHighlight hook 进行高亮管理
+  const { highlight, isHighlighted } = useHighlight({ defaultDuration: 1500 })
   const [caseSource, setCaseSource] = useState<'preset' | 'custom'>('preset')
   const [selectedCaseSets, setSelectedCaseSets] = useState<string[]>([])
   const [customCaseInput, setCustomCaseInput] = useState(
@@ -122,6 +135,24 @@ export function PromptOptimizeFlowPage() {
     window.dispatchEvent(new CustomEvent('ai-assistant-send', { detail: { text } }))
   }, [])
 
+  const flashHighlight = useCallback((tag: string) => {
+    setHighlightedTags(prev => (prev.includes(tag) ? prev : [...prev, tag]))
+    setTimeout(() => {
+      setHighlightedTags(prev => prev.filter(item => item !== tag))
+    }, 1200)
+  }, [])
+
+  const markSynced = useCallback(
+    (tag: 'diff' | 'config') => {
+      if (!hasOptimizedPrompt) return
+      const now = new Date()
+      const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+      setAutoSyncAt(timestamp)
+      flashHighlight(tag)
+    },
+    [flashHighlight, hasOptimizedPrompt]
+  )
+
   useEffect(() => {
     setHasOptimizedPrompt(false)
     setSelectedBadcases([])
@@ -129,7 +160,7 @@ export function PromptOptimizeFlowPage() {
     setCaseSource('preset')
     setSelectedCaseSets([])
     setSelectedMetrics([])
-  }, [promptId, mode])
+  }, [promptId, effectiveMode])
 
   const baselinePassRate = prompt?.passRate || 0
   const regressionPassRate = Math.min(100, baselinePassRate + 10)
@@ -168,6 +199,202 @@ export function PromptOptimizeFlowPage() {
     [selectedModel]
   )
 
+  const optimizedPromptPreview = useMemo(() => {
+    // 如果有 AI 生成的内容，优先使用
+    if (aiGeneratedContent) {
+      // 从 AI 内容中提取优化后的提示词
+      // AI 内容可能包含诊断信息、优化建议等，我们需要智能提取
+      let optimizedPrompt = promptDiff.newPrompt
+      let additionalInfo = ''
+
+      // 尝试识别 AI 输出中的提示词片段（代码块）
+      const codeBlockMatch = aiGeneratedContent.match(/```(?:markdown|text)?\n([\s\S]+?)\n```/)
+      if (codeBlockMatch) {
+        optimizedPrompt = codeBlockMatch[1]
+      }
+
+      // 提取诊断信息
+      const diagnosisMatch = aiGeneratedContent.match(/🎯 问题根因：([\s\S]+?)━━━/)
+      if (diagnosisMatch) {
+        additionalInfo += `\n\n## AI 诊断结果\n${diagnosisMatch[1].trim()}\n`
+      }
+
+      // 提取优化方案
+      const solutionMatch = aiGeneratedContent.match(/🔧 修复方案：([\s\S]+?)(?:预计效果|━━━|$)/)
+      if (solutionMatch) {
+        additionalInfo += `\n## 优化方案\n${solutionMatch[1].trim()}\n`
+      }
+
+      // 提取修改位置
+      const modificationMatch = aiGeneratedContent.match(/📍 修改位置: (.+?)(?:\n|$)/)
+      if (modificationMatch) {
+        additionalInfo += `\n## 修改位置\n${modificationMatch[1].trim()}\n`
+      }
+
+      // 提取修改前后对比
+      const beforeAfterMatch = aiGeneratedContent.match(/🔴 修改前：([\s\S]+?)🟢 修改后：([\s\S]+?)(?:━━━|$)/)
+      if (beforeAfterMatch) {
+        additionalInfo += `\n## 修改对比\n\n### 修改前\n${beforeAfterMatch[1].trim()}\n\n### 修改后\n${beforeAfterMatch[2].trim()}\n`
+      }
+
+      // 提取测试结果
+      const testResultMatch = aiGeneratedContent.match(/📊 测试结果：([\s\S]+?)(?:━━━|$)/)
+      if (testResultMatch) {
+        additionalInfo += `\n## 测试结果\n${testResultMatch[1].trim()}\n`
+      }
+
+      return optimizedPrompt + additionalInfo
+    }
+
+    // 否则使用默认的配置摘要模式
+    const selectedSuggestionBlocks = optimizeSuggestions
+      .filter(item => selectedSuggestions.includes(item.id))
+      .map(item => `- ${item.title}：${item.description}`)
+    const defaultSuggestionBlocks = ['- 默认优化：补齐角色定位、意图澄清、边界处理']
+    const goalLines = []
+    if (effectiveMode === 'enhance' && enhanceGoal) {
+      goalLines.push(`- 自定义目标：${enhanceGoal}`)
+    }
+    if (enhanceImageName) {
+      goalLines.push(`- 已上传参考图：${enhanceImageName}`)
+    }
+    const coverageLine =
+      caseSource === 'preset'
+        ? `- 测试集：${selectedCaseSetTitles.join(' / ') || '默认推荐集'}`
+        : `- 测试集：自定义 ${customCaseLines} 条`
+    const metricLine = `- 指标：${selectedMetrics.join('、') || '通过率'}`
+    const modelLine = `- 模型：${selectedModelInfo.label} · 温度 ${temperature.toFixed(2)}`
+    const releaseLine = `- 版本：${releaseForm.version} · ${releaseForm.name || '未命名'}`
+    const releaseTypeLine = `- 发布类型：${releaseForm.type}`
+
+    return `${promptDiff.newPrompt}
+
+## 优化重点（自动同步）
+${(selectedSuggestionBlocks.length ? selectedSuggestionBlocks : defaultSuggestionBlocks).join('\n')}${goalLines.length ? `\n${goalLines.join('\n')}` : ''}
+
+## 配置摘要
+${modelLine}
+${coverageLine}
+${metricLine}
+${releaseLine}
+${releaseTypeLine}
+`.trim()
+  }, [
+    aiGeneratedContent,
+    caseSource,
+    customCaseLines,
+    effectiveMode,
+    enhanceGoal,
+    enhanceImageName,
+    releaseForm.name,
+    releaseForm.type,
+    releaseForm.version,
+    selectedCaseSetTitles,
+    selectedMetrics,
+    selectedModelInfo.label,
+    selectedSuggestions,
+    temperature,
+  ])
+
+  // 配置变化时的自动高亮和同步
+  useEffect(() => {
+    if (!hasOptimizedPrompt) return
+
+    // 高亮 Diff 区域
+    highlight('diff', 2000)
+    markSynced('diff')
+  }, [hasOptimizedPrompt, enhanceGoal, enhanceImageName, highlight, markSynced, selectedSuggestions])
+
+  useEffect(() => {
+    if (!hasOptimizedPrompt) return
+
+    // 高亮配置摘要区域
+    highlight('config-summary', 1500)
+    highlight('diff', 2000)
+    markSynced('config')
+  }, [
+    caseSource,
+    customCaseInput,
+    hasOptimizedPrompt,
+    highlight,
+    markSynced,
+    releaseForm.changelog,
+    releaseForm.name,
+    releaseForm.type,
+    releaseForm.version,
+    selectedCaseSets,
+    selectedMetrics,
+    selectedModel,
+    temperature,
+  ])
+
+  useEffect(() => {
+    const ready =
+      stage === 'baseline' ||
+      stage === 'baseline-done' ||
+      stage === 'regression' ||
+      stage === 'done'
+    if (!ready) return
+    if (!hasOptimizedPrompt) {
+      setHasOptimizedPrompt(true)
+      return
+    }
+    markSynced('diff')
+    markSynced('config')
+  }, [hasOptimizedPrompt, markSynced, stage])
+
+  // 监听 AI 流式输出更新（真实 AI 模式）
+  useEffect(() => {
+    const handleStreamUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ content: string }>
+      const content = customEvent.detail?.content
+      if (!content) return
+
+      // 显示优化区域
+      if (!hasOptimizedPrompt) {
+        setHasOptimizedPrompt(true)
+      }
+
+      // 更新 AI 生成的内容
+      setAiGeneratedContent(content)
+
+      // 触发 Diff 区域高亮
+      highlight('diff', 2000)
+      markSynced('diff')
+    }
+
+    window.addEventListener('ai-stream-update', handleStreamUpdate as EventListener)
+    return () => {
+      window.removeEventListener('ai-stream-update', handleStreamUpdate as EventListener)
+    }
+  }, [hasOptimizedPrompt, highlight, markSynced])
+
+  // 监听 AI 脚本响应（演示模式）
+  useEffect(() => {
+    const handleScriptResponse = (event: Event) => {
+      const customEvent = event as CustomEvent<{ content: string }>
+      const content = customEvent.detail?.content
+      if (!content) return
+
+      // 显示优化区域
+      if (!hasOptimizedPrompt) {
+        setHasOptimizedPrompt(true)
+      }
+
+      // 更新 AI 生成的内容
+      setAiGeneratedContent(content)
+
+      // 触发 Diff 区域高亮
+      highlight('diff', 2000)
+      markSynced('diff')
+    }
+
+    window.addEventListener('ai-script-response', handleScriptResponse as EventListener)
+    return () => {
+      window.removeEventListener('ai-script-response', handleScriptResponse as EventListener)
+    }
+  }, [hasOptimizedPrompt, highlight, markSynced])
+
   const getNodeDotClass = (type?: DiagnosisNode['type']) => {
     if (type === 'user') return 'bg-blue-500'
     if (type === 'warning') return 'bg-amber-500'
@@ -182,7 +409,7 @@ export function PromptOptimizeFlowPage() {
         <div>
           <div className="flex items-center gap-2">
             <p className="font-medium text-[var(--text-primary)]">{node.label}</p>
-            {node.type === 'warning' && <Badge variant="destructive" className="text-xs">风险</Badge>}
+            {node.type === 'warning' && <Badge variant="error" className="text-xs">风险</Badge>}
             {node.type === 'user' && <Badge variant="secondary" className="text-xs">用户语境</Badge>}
           </div>
           <p className="text-sm text-[var(--text-secondary)] mt-0.5">{node.description}</p>
@@ -202,10 +429,20 @@ export function PromptOptimizeFlowPage() {
 
   const toggleCaseSet = (id: string) => {
     setSelectedCaseSets(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
+    // 触发高亮
+    if (hasOptimizedPrompt) {
+      highlight('config-summary', 1500)
+      highlight('diff', 2000)
+    }
   }
 
   const toggleMetric = (metric: string) => {
     setSelectedMetrics(prev => prev.includes(metric) ? prev.filter(m => m !== metric) : [...prev, metric])
+    // 触发高亮
+    if (hasOptimizedPrompt) {
+      highlight('config-summary', 1500)
+      highlight('diff', 2000)
+    }
   }
 
   const handleConfirmBadcases = () => {
@@ -214,16 +451,26 @@ export function PromptOptimizeFlowPage() {
       .map(item => `${item.label}（${item.desc.replace('问题：', '')}）`)
       .join('；')
     sendAssistantCommand(`帮我修复这个badcase + ${detailText}。请给出上下文诊断、根因路径和需要修改的提示词片段。`)
+
+    // 显示优化区域
+    if (!hasOptimizedPrompt) {
+      setHasOptimizedPrompt(true)
+    }
     setStage('idle')
   }
 
   const handleConfirmScenario = () => {
-    const label = modeLabel[mode] || '提示词优化'
+    const label = modeLabel[effectiveMode] || '提示词优化'
     const summary = `${prompt.name}（${prompt.intent}，版本 ${prompt.version}）`
-    const ask = mode === 'diagnose'
+    const ask = effectiveMode === 'diagnose'
       ? '帮我做系统性诊断，给出风险、潜在问题和修复建议'
       : '帮我基于需求方向优化提示词，并列出需要补充的规则'
     sendAssistantCommand(`${label}模式，目标提示词：${summary}。${ask}。`)
+
+    // 显示优化区域
+    if (!hasOptimizedPrompt) {
+      setHasOptimizedPrompt(true)
+    }
   }
 
   const handleGenerateWithAI = () => {
@@ -232,12 +479,16 @@ export function PromptOptimizeFlowPage() {
       .map(item => item.title)
       .join('、') || '默认优化建议'
 
-    const enhanceDetail = mode === 'enhance'
+    const enhanceDetail = effectiveMode === 'enhance'
       ? `；自定义优化目标：${enhanceGoal || '未填写'}${enhanceImageName ? `（已上传：${enhanceImageName}）` : ''}`
       : ''
 
-    sendAssistantCommand(`帮我基于这些优化建议优化一下现有的提示词：${suggestionText}。模式：${modeLabel[mode] || '提示词优化'}，当前提示词：${prompt.name}${enhanceDetail}。`)
-    setHasOptimizedPrompt(true)
+    sendAssistantCommand(`帮我基于这些优化建议优化一下现有的提示词：${suggestionText}。模式：${modeLabel[effectiveMode] || '提示词优化'}，当前提示词：${prompt.name}${enhanceDetail}。`)
+
+    // 立即显示优化后的内容
+    if (!hasOptimizedPrompt) {
+      setHasOptimizedPrompt(true)
+    }
   }
 
   const handleStartTesting = () => {
@@ -246,7 +497,13 @@ export function PromptOptimizeFlowPage() {
       : customCaseInput.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 3).join('；')
     const metricText = selectedMetrics.join('、') || '通过率'
 
-    sendAssistantCommand(`基于这些用例开始测试：${caseText}。模型：${selectedModelInfo.label}，温度：${temperature.toFixed(2)}，测量指标：${metricText}。场景：${modeLabel[mode] || '提示词优化'}。`)
+    sendAssistantCommand(`基于这些用例开始测试：${caseText}。模型：${selectedModelInfo.label}，温度：${temperature.toFixed(2)}，测量指标：${metricText}。场景：${modeLabel[effectiveMode] || '提示词优化'}。`)
+
+    // 显示优化区域（如果还没显示）
+    if (!hasOptimizedPrompt) {
+      setHasOptimizedPrompt(true)
+    }
+
     setStage('baseline')
     setTimeout(() => setStage('baseline-done'), 400)
     setTimeout(() => setStage('regression'), 900)
@@ -278,7 +535,7 @@ export function PromptOptimizeFlowPage() {
                 <h1 className="text-lg font-semibold text-[var(--text-primary)]">提示词优化流程</h1>
                 <Badge variant="secondary">{prompt.version}</Badge>
                 <Badge variant="secondary">{prompt.intent}</Badge>
-                {mode && <Badge>{modeLabel[mode] || '优化模式'}</Badge>}
+                {effectiveMode && <Badge>{displayModeLabel}</Badge>}
               </div>
               <p className="text-sm text-[var(--text-secondary)] mt-1">
                 针对 “{prompt.name}” 的完整优化旅程，覆盖诊断、方案、测试与发布。
@@ -297,7 +554,7 @@ export function PromptOptimizeFlowPage() {
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* 7天 Badcase 概览 + 选择 */}
-        {mode === 'badcase' && (
+        {effectiveMode === 'badcase' && (
           <Card>
             <CardHeader>
               <CardTitle>Badcase 修复模式</CardTitle>
@@ -339,7 +596,7 @@ export function PromptOptimizeFlowPage() {
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={item.priority === '高优' ? 'destructive' : 'default'}>{item.priority}</Badge>
+                        <Badge variant={item.priority === '高优' ? 'error' : 'default'}>{item.priority}</Badge>
                         <p className="font-medium text-[var(--text-primary)]">{item.label}</p>
                       </div>
                       <p className="text-sm text-[var(--text-secondary)] mt-1">{item.desc}</p>
@@ -362,16 +619,16 @@ export function PromptOptimizeFlowPage() {
           </Card>
         )}
 
-        {mode === 'diagnose' && (
+        {effectiveMode === 'diagnose' && (
           <Card>
             <CardHeader>
-              <CardTitle>{modeLabel[mode] || '模式确认'}</CardTitle>
+              <CardTitle>{displayModeLabel || '模式确认'}</CardTitle>
               <CardDescription>一键把当前提示词和目标发送给右侧 AI 助手</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-between gap-3">
               <div className="text-sm text-[var(--text-secondary)] space-y-1">
                 <p>目标提示词：{prompt.name} · {prompt.intent}</p>
-                <p>动作：自动发起“帮我{mode === 'diagnose' ? '智能诊断' : '基于需求优化'}”指令到右侧 AI</p>
+                <p>动作：自动发起“帮我{effectiveMode === 'diagnose' ? '智能诊断' : '基于需求优化'}”指令到右侧 AI</p>
               </div>
               <Button onClick={handleConfirmScenario}>
                 确认选择
@@ -381,7 +638,7 @@ export function PromptOptimizeFlowPage() {
         )}
 
         {/* 问题诊断区（仅 Badcase 模式） */}
-        {mode === 'badcase' && (
+        {effectiveMode === 'badcase' && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -435,7 +692,7 @@ export function PromptOptimizeFlowPage() {
                     {selectedBadcaseDetails.length ? selectedBadcaseDetails.map(item => (
                       <div key={item.id} className="p-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
                         <div className="flex items-center gap-2">
-                          <Badge variant={item.priority === '高优' ? 'destructive' : 'default'}>{item.priority}</Badge>
+                          <Badge variant={item.priority === '高优' ? 'error' : 'default'}>{item.priority}</Badge>
                           <p className="text-sm font-medium text-[var(--text-primary)]">{item.label}</p>
                         </div>
                         <p className="text-xs text-[var(--text-secondary)] mt-1">{item.desc}</p>
@@ -471,7 +728,14 @@ export function PromptOptimizeFlowPage() {
             {optimizeSuggestions.map(item => (
               <div
                 key={item.id}
-                onClick={() => toggleSuggestion(item.id)}
+                onClick={() => {
+                  toggleSuggestion(item.id)
+                  // 触发高亮
+                  if (hasOptimizedPrompt) {
+                    highlight('config-summary', 1500)
+                    highlight('diff', 2000)
+                  }
+                }}
                 className={cn(
                   "p-4 rounded-lg border cursor-pointer transition-colors",
                   selectedSuggestions.includes(item.id)
@@ -488,7 +752,7 @@ export function PromptOptimizeFlowPage() {
               </div>
             ))}
 
-            {mode === 'enhance' && (
+            {effectiveMode === 'enhance' && (
               <div className="col-span-2 p-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)]">
                 <div className="flex items-center justify-between">
                   <div>
@@ -511,7 +775,14 @@ export function PromptOptimizeFlowPage() {
                 <div className="mt-3">
                   <ConfigTextarea
                     value={enhanceGoal}
-                    onChange={(e) => setEnhanceGoal(e.target.value)}
+                    onChange={(e) => {
+                      setEnhanceGoal(e.target.value)
+                      // 触发高亮
+                      if (hasOptimizedPrompt) {
+                        highlight('config-summary', 1500)
+                        highlight('diff', 2000)
+                      }
+                    }}
                     rows={4}
                     placeholder="示例：让回复增加品牌语调；补充免责声明；根据上传的截图对齐界面文案风格..."
                   />
@@ -547,7 +818,14 @@ export function PromptOptimizeFlowPage() {
                 <div className="flex items-center justify-between">
                   <div className="inline-flex rounded-lg border border-[var(--border-default)] overflow-hidden">
                     <button
-                      onClick={() => setCaseSource('preset')}
+                      onClick={() => {
+                        setCaseSource('preset')
+                        // 触发高亮
+                        if (hasOptimizedPrompt) {
+                          highlight('config-summary', 1500)
+                          highlight('diff', 2000)
+                        }
+                      }}
                       className={cn(
                         "px-3 py-2 text-sm transition-colors",
                         caseSource === 'preset'
@@ -558,7 +836,14 @@ export function PromptOptimizeFlowPage() {
                       现有测试集
                     </button>
                     <button
-                      onClick={() => setCaseSource('custom')}
+                      onClick={() => {
+                        setCaseSource('custom')
+                        // 触发高亮
+                        if (hasOptimizedPrompt) {
+                          highlight('config-summary', 1500)
+                          highlight('diff', 2000)
+                        }
+                      }}
                       className={cn(
                         "px-3 py-2 text-sm transition-colors",
                         caseSource === 'custom'
@@ -601,7 +886,14 @@ export function PromptOptimizeFlowPage() {
                     <p className="text-sm text-[var(--text-secondary)]">输入自定义用例（每行一个问题）</p>
                     <ConfigTextarea
                       value={customCaseInput}
-                      onChange={(e) => setCustomCaseInput(e.target.value)}
+                      onChange={(e) => {
+                        setCustomCaseInput(e.target.value)
+                        // 触发高亮
+                        if (hasOptimizedPrompt) {
+                          highlight('config-summary', 1500)
+                          highlight('diff', 2000)
+                        }
+                      }}
                       rows={6}
                     />
                     <p className="text-xs text-[var(--text-tertiary)]">示例：我要改支付密码 / 余额不足怎么办 / 帮我查询积分兑换方式</p>
@@ -633,7 +925,14 @@ export function PromptOptimizeFlowPage() {
                   {modelOptions.map(model => (
                     <button
                       key={model.id}
-                      onClick={() => setSelectedModel(model.id)}
+                      onClick={() => {
+                        setSelectedModel(model.id)
+                        // 触发高亮
+                        if (hasOptimizedPrompt) {
+                          highlight('config-summary', 1500)
+                          highlight('diff', 2000)
+                        }
+                      }}
                       className={cn(
                         "w-full text-left p-3 rounded-lg border transition-all",
                         selectedModel === model.id
@@ -656,7 +955,14 @@ export function PromptOptimizeFlowPage() {
                     max="1"
                     step="0.05"
                     value={temperature}
-                    onChange={(e) => setTemperature(Number(e.target.value))}
+                    onChange={(e) => {
+                      setTemperature(Number(e.target.value))
+                      // 触发高亮
+                      if (hasOptimizedPrompt) {
+                        highlight('config-summary', 1500)
+                        highlight('diff', 2000)
+                      }
+                    }}
                     className="w-full accent-[var(--color-primary)]"
                   />
                   <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
@@ -767,13 +1073,48 @@ export function PromptOptimizeFlowPage() {
               <CardDescription>Diff 对比、测试对比与版本发布信息</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <DiffViewer
-                oldCode={promptDiff.oldPrompt}
-                newCode={promptDiff.newPrompt}
-                oldTitle="当前版本"
-                newTitle="优化后"
-                splitView
-              />
+              <div
+                className={cn(
+                  "p-3 rounded-lg border flex items-center justify-between gap-3 transition-all duration-300",
+                  isHighlighted('config-summary')
+                    ? "bg-[var(--color-ai-thinking)]/10 ring-2 ring-[var(--color-ai-thinking)]/50 border-[var(--color-ai-thinking)]"
+                    : highlightedTags.includes('config')
+                    ? "bg-[var(--color-primary-muted)] ring-2 ring-[var(--color-primary)]/50 border-[var(--color-primary)]"
+                    : "bg-[var(--bg-secondary)] border-[var(--border-default)]"
+                )}
+              >
+                <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-primary)]">
+                  <Badge variant="secondary">版本 {releaseForm.version}</Badge>
+                  <Badge variant="secondary">{selectedModelInfo.label} · 温度 {temperature.toFixed(2)}</Badge>
+                  <Badge variant="secondary">
+                    {caseSource === 'preset' ? `${selectedPresetCount} 条现有用例` : `${customCaseLines} 条自定义`}
+                  </Badge>
+                  <Badge variant="secondary">指标：{selectedMetrics.join('、') || '通过率'}</Badge>
+                  <Badge variant="secondary">建议：{selectedSuggestions.length || '默认'}</Badge>
+                </div>
+                <div className="text-xs text-[var(--text-tertiary)]">
+                  {autoSyncAt ? `已自动同步 ${autoSyncAt}` : '配置变更后自动同步到 Diff'}
+                </div>
+              </div>
+
+              <div
+                className={cn(
+                  "transition-all duration-300",
+                  isHighlighted('diff')
+                    ? "ring-2 ring-[var(--color-ai-thinking)]/60 rounded-lg shadow-lg shadow-[var(--color-ai-thinking)]/20"
+                    : highlightedTags.includes('diff')
+                    ? "ring-2 ring-[var(--color-primary)]/60 rounded-lg"
+                    : ""
+                )}
+              >
+                <DiffViewer
+                  oldCode={promptDiff.oldPrompt}
+                  newCode={optimizedPromptPreview}
+                  oldTitle={`当前版本 ${prompt.version}`}
+                  newTitle={`优化后 · ${releaseForm.version}`}
+                  splitView
+                />
+              </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)]">
                   <p className="text-sm text-[var(--text-secondary)]">基准通过率</p>
@@ -793,22 +1134,48 @@ export function PromptOptimizeFlowPage() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)] mb-1">版本号</p>
-                    <Input value={releaseForm.version} onChange={(e) => setReleaseForm(prev => ({ ...prev, version: e.target.value }))} />
+                    <Input
+                      value={releaseForm.version}
+                      onChange={(e) => {
+                        setReleaseForm(prev => ({ ...prev, version: e.target.value }))
+                        highlight('config-summary', 1500)
+                        highlight('diff', 2000)
+                      }}
+                    />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)] mb-1">版本名称</p>
-                    <Input placeholder="请输入版本名称" value={releaseForm.name} onChange={(e) => setReleaseForm(prev => ({ ...prev, name: e.target.value }))} />
+                    <Input
+                      placeholder="请输入版本名称"
+                      value={releaseForm.name}
+                      onChange={(e) => {
+                        setReleaseForm(prev => ({ ...prev, name: e.target.value }))
+                        highlight('config-summary', 1500)
+                        highlight('diff', 2000)
+                      }}
+                    />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)] mb-1">版本类型</p>
-                    <Input value={releaseForm.type} onChange={(e) => setReleaseForm(prev => ({ ...prev, type: e.target.value }))} />
+                    <Input
+                      value={releaseForm.type}
+                      onChange={(e) => {
+                        setReleaseForm(prev => ({ ...prev, type: e.target.value }))
+                        highlight('config-summary', 1500)
+                        highlight('diff', 2000)
+                      }}
+                    />
                   </div>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[var(--text-primary)] mb-1">变更日志 / 发布说明</p>
                   <ConfigTextarea
                     value={releaseForm.changelog}
-                    onChange={(e) => setReleaseForm(prev => ({ ...prev, changelog: e.target.value }))}
+                    onChange={(e) => {
+                      setReleaseForm(prev => ({ ...prev, changelog: e.target.value }))
+                      highlight('config-summary', 1500)
+                      highlight('diff', 2000)
+                    }}
                     rows={7}
                   />
                 </div>

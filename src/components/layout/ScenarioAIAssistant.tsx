@@ -86,8 +86,15 @@ export function ScenarioAIAssistant() {
             : msg
         )
       )
+
+      // 发送流式内容更新事件（用于 prompt 场景的 Diff 同步更新）
+      if (scenario === 'prompt') {
+        window.dispatchEvent(new CustomEvent('ai-stream-update', {
+          detail: { content: streamContent }
+        }))
+      }
     }
-  }, [streamContent, isStreaming])
+  }, [streamContent, isStreaming, scenario])
 
   // 构建消息历史
   const buildHistory = useCallback((): ChatMessage[] => {
@@ -203,6 +210,13 @@ export function ScenarioAIAssistant() {
       content: step.response,
       timestamp: new Date(),
     }])
+
+    // 发送脚本响应事件（用于 prompt 场景的 Diff 同步更新）
+    if (scenario === 'prompt' && step.response.type === 'text') {
+      window.dispatchEvent(new CustomEvent('ai-script-response', {
+        detail: { content: step.response.text }
+      }))
+    }
 
     // 更新步骤
     const newStep = stepIndex + 1

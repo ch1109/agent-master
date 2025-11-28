@@ -119,20 +119,7 @@ export const promptDiff = {
 // 严格按照产品需求文档实现
 export const promptOptimizeScript = [
   {
-    // 【第1轮】优化需求输入与快速分析
-    response: {
-      type: 'text' as const,
-      text: `💭 正在分析您的需求...
-
-✅ 已识别：提示词优化需求
-📋 检查当前提示词状态
-🔍 扫描最近的Badcase...`,
-    },
-    delay: 2000,
-    thinkingText: '分析需求中',
-  },
-  {
-    // 【第1轮续】分析结果与优化方式选择
+    // 【第1轮】分析结果与优化方式选择
     response: {
       type: 'text' as const,
       text: `小渝收到！我来帮您优化提示词~
