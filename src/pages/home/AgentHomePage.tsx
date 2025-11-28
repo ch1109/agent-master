@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
   BadgeCheck,
@@ -24,6 +25,9 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  actionType?: 'intent-config'
+  actionLabel?: string
+  forwardText?: string
 }
 
 const resourceStats = [
@@ -73,6 +77,10 @@ const quickActions = [
   { label: '系统体检', icon: ShieldCheck },
   { label: '调整算力', icon: Gauge },
   { label: '查看 Badcase', icon: AlertCircle },
+  { label: '优化 Badcase', icon: AlertCircle },
+  { label: '运行状态总结', icon: Cpu },
+  { label: '你可以做什么', icon: Sparkles },
+  { label: '如何上传知识库', icon: ShieldCheck },
 ]
 
 const virtualVideoSrc = new URL('../../../虚拟人视频.webm', import.meta.url).href
@@ -83,6 +91,9 @@ export function AgentHomePage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  const intentKeywords = ['帮我', '配置', '银行', '业务导航', '意图']
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -109,6 +120,18 @@ export function AgentHomePage() {
     if (userMessage.includes('异常') || userMessage.includes('Badcase') || userMessage.includes('错误')) {
       return '检测到 1 条异常：支付接口阻断 (Badcase)，发生在 10:42 AM，来源 API_GATEWAY。建议立即检查支付网关配置和日志。'
     }
+    if (userMessage.includes('优化 Badcase') || userMessage.includes('优化badcase')) {
+      return '已启动 Badcase 优化流程：1) 回放异常调用链；2) 自动聚类最近 24 小时错误；3) 生成修复建议并推送至「Badcase 管理」。'
+    }
+    if (userMessage.includes('运行状态总结') || userMessage.includes('总结运行状态')) {
+      return '运行状态总结：CPU 56% 轻负载；内存 81% 缓存命中 92%；Token 占用 28% 长上下文受控；待办 3 条，Badcase 1 条待处理。整体健康，建议处理异常后发布日报。'
+    }
+    if (userMessage.includes('你可以做什么') || userMessage.includes('能做什么')) {
+      return '我可为你：监控运行指标、生成日报、体检与告警；整理 Badcase 并给出修复建议；协助调整算力和路由；上传/同步知识库并生成 QA 测试集。'
+    }
+    if (userMessage.includes('如何上传知识库') || userMessage.includes('上传知识库')) {
+      return '上传知识库步骤：进入左侧「配置管理-知识库」，选择数据源类型（文档/网页/API），上传或拉取后执行向量化。完成后可在「Playground」对话测试并生成回归集。'
+    }
     if (userMessage.includes('日报') || userMessage.includes('报告')) {
       return '好的，我正在为您生成今日工作日报。报告将包含系统运行状态、待办任务进度、异常处理记录等内容，预计 2 分钟内完成。'
     }
@@ -122,6 +145,9 @@ export function AgentHomePage() {
     const textToSend = messageText || inputText.trim()
     if (!textToSend) return
 
+    const matchedKeywords = intentKeywords.filter(keyword => textToSend.includes(keyword)).length
+    const shouldSuggestIntentConfig = matchedKeywords >= 2
+
     // 添加用户消息
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -129,8 +155,24 @@ export function AgentHomePage() {
       content: textToSend,
       timestamp: new Date()
     }
-    setMessages(prev => [...prev, userMessage])
     setInputText('')
+
+    if (shouldSuggestIntentConfig) {
+      const actionMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        role: 'assistant',
+        content: '检测到你想配置银行业务导航的意图，是否前往意图配置并继续？',
+        timestamp: new Date(),
+        actionType: 'intent-config',
+        actionLabel: '去配置意图',
+        forwardText: textToSend,
+      }
+      setMessages(prev => [...prev, userMessage, actionMessage])
+      setIsTyping(false)
+      return
+    }
+
+    setMessages(prev => [...prev, userMessage])
     setIsTyping(true)
 
     // 模拟 AI 思考和回复
@@ -144,6 +186,15 @@ export function AgentHomePage() {
     }
     setMessages(prev => [...prev, aiResponse])
     setIsTyping(false)
+  }
+
+  const handleIntentRedirect = (forwardText?: string) => {
+    const text = forwardText || '请帮我配置银行业务导航意图'
+    navigate('/config/intent')
+    // 等待布局渲染后将文本发送至右侧 AI 助手
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('ai-assistant-send', { detail: { text } }))
+    }, 400)
   }
 
   const handleVoiceToggle = () => {
@@ -166,6 +217,18 @@ export function AgentHomePage() {
         break
       case '查看 Badcase':
         message = '请显示当前所有异常和 Badcase'
+        break
+      case '优化 Badcase':
+        message = '请启动 Badcase 优化流程'
+        break
+      case '运行状态总结':
+        message = '请给出当前运行状态总结'
+        break
+      case '你可以做什么':
+        message = '你可以做什么'
+        break
+      case '如何上传知识库':
+        message = '如何上传知识库'
         break
       default:
         message = label
@@ -198,17 +261,17 @@ export function AgentHomePage() {
   }
 
   return (
-    <div className="relative h-full overflow-y-auto bg-gradient-to-br from-[#f7f9ff] via-white to-[#f3f5ff]">
+    <div className="relative min-h-screen overflow-y-auto bg-gradient-to-br from-[#f7f9ff] via-white to-[#f3f5ff]">
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-10 top-24 h-56 w-56 rounded-full bg-[#e5ebff] blur-3xl" />
         <div className="absolute right-16 top-10 h-64 w-64 rounded-full bg-[#efe8ff] blur-3xl" />
         <div className="absolute bottom-12 left-1/3 h-52 w-52 rounded-full bg-[#e7f5ff] blur-3xl" />
       </div>
 
-      <div className="relative mx-auto flex max-w-[1800px] flex-col gap-4 px-5 py-5">
-        <div className="grid gap-4 xl:grid-cols-[580px,1fr]">
+      <div className="relative mx-auto flex min-h-[calc(100vh-96px)] max-w-[2080px] flex-col justify-center gap-6 px-10 py-14">
+        <div className="grid items-stretch gap-6 xl:grid-cols-[800px,1fr]">
           {/* 左侧信息列，支持两列排布 */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid h-full min-h-[1100px] grid-cols-1 gap-4 lg:grid-cols-2">
             <Card className="border-[var(--border-subtle)] shadow-sm lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
                 <div>
@@ -366,7 +429,7 @@ export function AgentHomePage() {
           </div>
 
           {/* 右侧主工作区 */}
-          <Card className="relative flex flex-col overflow-hidden border-[var(--border-subtle)] bg-white/95 shadow-lg">
+          <Card className="relative flex min-h-[1100px] flex-col overflow-hidden border-[var(--border-subtle)] bg-white/95 shadow-lg">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute inset-x-12 top-4 h-24 rounded-full bg-gradient-to-b from-[#e6ecff] to-transparent blur-xl" />
               <div className="absolute inset-y-8 left-1/3 h-[70%] w-1/2 -translate-x-1/4 rounded-full bg-gradient-to-br from-[#eef2ff] via-transparent to-[#f5f3ff]" />
@@ -381,17 +444,15 @@ export function AgentHomePage() {
               <Badge className="bg-emerald-50 text-emerald-600">在线</Badge>
             </CardHeader>
 
-            <CardContent className="relative flex flex-1 flex-col gap-6 p-8 overflow-hidden">
+            <CardContent className="relative flex flex-1 flex-col gap-8 p-10 pb-12 overflow-hidden">
               <div className="flex flex-1 gap-6 overflow-hidden">
                 {/* 左侧虚拟人区域 */}
-                <div className={`flex shrink-0 flex-col items-center justify-center transition-all duration-500 ${
-                  messages.length === 0 ? 'w-full' : 'w-[420px]'
+                <div className={`flex min-h-[770px] shrink-0 flex-col items-center justify-center transition-all duration-500 ${
+                  messages.length === 0 ? 'w-full' : 'w-[576px]'
                 }`}>
                   <div className="relative flex h-full w-full items-center justify-center">
                     <video
-                      className={`transition-all duration-500 object-contain ${
-                        messages.length === 0 ? 'h-[630px] w-auto' : 'h-[630px] w-auto'
-                      }`}
+                      className="max-h-[860px] w-auto max-w-full object-contain transition-all duration-500"
                       src={virtualVideoSrc}
                       autoPlay
                       muted
@@ -435,21 +496,34 @@ export function AgentHomePage() {
                   ) : (
                     <div className="flex flex-col gap-4 pr-2">
                       {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                              message.role === 'user'
-                                ? 'bg-[var(--color-primary)] text-white'
-                                : 'bg-white border border-[var(--border-subtle)] text-[var(--text-primary)] shadow-sm'
-                            }`}
-                          >
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                          </div>
+                    <div
+                      key={message.id}
+                      className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                          message.role === 'user'
+                            ? 'bg-[var(--color-primary)] text-white'
+                            : 'bg-white border border-[var(--border-subtle)] text-[var(--text-primary)] shadow-sm'
+                        }`}
+                      >
+                        <div className="flex flex-col gap-3">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                          {message.actionType === 'intent-config' && (
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                className="rounded-full bg-[var(--color-primary)] px-3 text-white hover:bg-[var(--color-primary)]/90"
+                                onClick={() => handleIntentRedirect(message.forwardText)}
+                              >
+                                {message.actionLabel || '确认前往'}
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      </div>
+                    </div>
+                  ))}
                       {isTyping && (
                         <div className="flex gap-3 justify-start">
                           <div className="rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 shadow-sm">
@@ -468,6 +542,19 @@ export function AgentHomePage() {
               </div>
 
               <div className="mt-auto pt-4 shrink-0">
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {['生成日报', '系统体检', '调整算力', '查看 Badcase', '优化 Badcase', '运行状态总结', '你可以做什么', '如何上传知识库'].map((action) => (
+                    <Button
+                      key={action}
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full border-[var(--border-subtle)] bg-white/80 text-[var(--text-primary)] shadow-sm hover:bg-white"
+                      onClick={() => handleQuickAction(action)}
+                    >
+                      {action}
+                    </Button>
+                  ))}
+                </div>
                 <div className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white px-3 py-2.5 shadow-sm">
                   <Button
                     size="icon"
