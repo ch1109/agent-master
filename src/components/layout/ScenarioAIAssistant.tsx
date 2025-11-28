@@ -34,6 +34,7 @@ export function ScenarioAIAssistant() {
   const [inputDisabled, setInputDisabled] = useState(false)
   const [useRealAI, setUseRealAI] = useState(false) // 是否使用真实 AI
   const [hasNavigatedToDetail, setHasNavigatedToDetail] = useState(false) // 是否已导航到详情页
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null) // 上传的图片 URL
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 获取调试选项
@@ -132,7 +133,18 @@ export function ScenarioAIAssistant() {
   }, [messages, isThinking, isStreaming])
 
   // 处理发送消息 - 真实 AI 模式
-  const handleSendRealAI = useCallback(async (text: string) => {
+  const handleSendRealAI = useCallback(async (text: string, imageFile?: File) => {
+    // 如果有图片，先处理图片上传
+    if (imageFile) {
+      const imageUrl = URL.createObjectURL(imageFile)
+      setUploadedImageUrl(imageUrl)
+
+      // 发送自定义事件到 UIDetailPage
+      window.dispatchEvent(new CustomEvent('ai-upload-image', {
+        detail: { imageUrl }
+      }))
+    }
+
     // 添加用户消息
     setMessages(prev => [...prev, {
       id: generateId(),
@@ -221,7 +233,18 @@ export function ScenarioAIAssistant() {
   }, [scenario, hasNavigatedToDetail, location.pathname, navigate])
 
   // 处理发送消息 - 脚本模式
-  const handleSendScript = useCallback(async (text: string) => {
+  const handleSendScript = useCallback(async (text: string, imageFile?: File) => {
+    // 如果有图片，先处理图片上传
+    if (imageFile) {
+      const imageUrl = URL.createObjectURL(imageFile)
+      setUploadedImageUrl(imageUrl)
+
+      // 发送自定义事件到 UIDetailPage
+      window.dispatchEvent(new CustomEvent('ai-upload-image', {
+        detail: { imageUrl }
+      }))
+    }
+
     // 添加用户消息
     setMessages(prev => [...prev, {
       id: generateId(),
@@ -262,11 +285,11 @@ export function ScenarioAIAssistant() {
   }, [scenario, currentStep, useRealAI, debugOptions.useMockResponse, handleSendRealAI, playScriptStep])
 
   // 主发送处理函数
-  const handleSend = useCallback(async (text: string) => {
+  const handleSend = useCallback(async (text: string, imageFile?: File) => {
     if (useRealAI && !debugOptions.useMockResponse) {
-      await handleSendRealAI(text)
+      await handleSendRealAI(text, imageFile)
     } else {
-      await handleSendScript(text)
+      await handleSendScript(text, imageFile)
     }
   }, [useRealAI, debugOptions.useMockResponse, handleSendRealAI, handleSendScript])
 
@@ -319,6 +342,10 @@ export function ScenarioAIAssistant() {
       timestamp: new Date(),
     }])
 
+    if (actionId === 'save') {
+      window.dispatchEvent(new Event('ui-config-save'))
+    }
+
     // 如果是"开始生成配置"按钮，先触发中间区域填充
     if (actionId === 'start') {
       // 延迟一小段时间后触发填充，让用户看到确认消息
@@ -338,11 +365,13 @@ export function ScenarioAIAssistant() {
     await playScriptStep(currentStep)
   }
 
+
   // 重置对话
   const handleReset = useCallback(() => {
     setCurrentStep(0)
     setMessages([])
     setHasNavigatedToDetail(false) // 重置导航状态
+    setUploadedImageUrl(null) // 重置图片
     resetAIStream()
     // 触发重新初始化
     setTimeout(() => {
@@ -370,6 +399,27 @@ export function ScenarioAIAssistant() {
       window.removeEventListener('ai-assistant-send', handler as EventListener)
     }
   }, [handleSend])
+
+  // 直接推送 AI 消息（例如业务操作完成后的确认）
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ text?: string }>
+      const text = customEvent.detail?.text
+      if (!text || !scenario) return
+
+      setMessages(prev => [...prev, {
+        id: generateId(),
+        role: 'assistant',
+        content: { type: 'text', text },
+        timestamp: new Date(),
+      }])
+    }
+
+    window.addEventListener('ai-assistant-message', handler as EventListener)
+    return () => {
+      window.removeEventListener('ai-assistant-message', handler as EventListener)
+    }
+  }, [scenario])
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg-elevated)] border-l border-[var(--border-subtle)]">
@@ -441,8 +491,8 @@ export function ScenarioAIAssistant() {
       </div>
 
       {/* 输入区域 */}
-      <ChatInput 
-        onSend={handleSend} 
+      <ChatInput
+        onSend={handleSend}
         disabled={isThinking || inputDisabled}
         placeholder={
           scenario === 'intent' ? '描述你想创建的意图...' :

@@ -9,7 +9,8 @@ import { ConfigInput, ConfigTextarea, ConfigField, ConfigLabel } from '@/compone
 import { ExecutionStage } from '@/components/ai-chat/ExecutionStage'
 import { useHighlight } from '@/hooks/useHighlight'
 import { useAgentStore } from '@/stores/agentStore'
-import { mockPages, aiGeneratedUIConfig } from '@/data/uiConfigMockData'
+import { useUIConfigStore } from '@/stores/uiConfigStore'
+import { aiGeneratedUIConfig } from '@/data/uiConfigMockData'
 
 /**
  * UI 配置详情页
@@ -21,6 +22,7 @@ export function UIDetailPage() {
   const isNew = id === 'new'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { debugOptions } = useAgentStore()
+  const { pages, addPage, updatePage } = useUIConfigStore()
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -43,6 +45,7 @@ export function UIDetailPage() {
   const [showImagePreview, setShowImagePreview] = useState(false)
   const [isAIAnalyzing, setIsAIAnalyzing] = useState(false)
   const [isAIFilling, setIsAIFilling] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [analysisTasks, setAnalysisTasks] = useState<Array<{ id: string; name: string; status: 'pending' | 'active' | 'completed' }>>([])
   const [analysisProgress, setAnalysisProgress] = useState(0)
 
@@ -52,17 +55,24 @@ export function UIDetailPage() {
   // 加载数据
   useEffect(() => {
     if (!isNew && id) {
-      const page = mockPages.find(p => p.id === id)
+      const page = pages.find(p => p.id === id)
       if (page) {
         setFormData(prev => ({
           ...prev,
           name: page.name,
           englishName: page.englishName,
           description: page.description,
+          pageId: page.pageId || '',
+          screenshot: page.screenshot || null,
+          supportedIntents: page.supportedIntents || [],
+          buttons: page.buttons || [],
+          aiRules: page.aiRules || '',
+          aiGoals: page.aiGoals || '',
+          aiNotes: page.aiNotes || '',
         }))
       }
     }
-  }, [id, isNew])
+  }, [id, isNew, pages])
 
   // 处理图片上传
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,6 +146,7 @@ export function UIDetailPage() {
       supportedIntents: config.capabilities.supportedIntents,
       aiRules: config.aiContext.rules,
       aiGoals: config.aiContext.goals,
+      pageId: config.basicInfo.pageId,
     }))
 
     setIsAIAnalyzing(false)
@@ -154,6 +165,7 @@ export function UIDetailPage() {
       { field: 'name', value: config.basicInfo.name },
       { field: 'englishName', value: config.basicInfo.englishName },
       { field: 'description', value: config.basicInfo.description },
+      { field: 'pageId', value: config.basicInfo.pageId || '' },
       { field: 'aiRules', value: config.aiContext.rules },
       { field: 'aiGoals', value: config.aiContext.goals },
     ]
@@ -178,9 +190,72 @@ export function UIDetailPage() {
   // 监听全局事件
   useEffect(() => {
     const handleAIFillEvent = () => handleAIFill()
+    const handleImageUploadEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ imageUrl: string }>
+      const { imageUrl } = customEvent.detail
+      if (imageUrl) {
+        setFormData(prev => ({ ...prev, screenshot: imageUrl }))
+      }
+    }
+
     window.addEventListener('ai-fill-ui', handleAIFillEvent)
-    return () => window.removeEventListener('ai-fill-ui', handleAIFillEvent)
+    window.addEventListener('ai-upload-image', handleImageUploadEvent)
+
+    return () => {
+      window.removeEventListener('ai-fill-ui', handleAIFillEvent)
+      window.removeEventListener('ai-upload-image', handleImageUploadEvent)
+    }
   }, [handleAIFill])
+
+  // 保存配置
+  const handleSave = useCallback(async () => {
+    if (isSaving) return
+    if (!formData.name.trim() || !formData.englishName.trim()) {
+      highlight('name', 1200)
+      highlight('englishName', 1200)
+      return
+    }
+
+    setIsSaving(true)
+    const payload = {
+      name: formData.name.trim(),
+      englishName: formData.englishName.trim(),
+      description: formData.description.trim(),
+      pageId: formData.pageId.trim() || undefined,
+      screenshot: formData.screenshot,
+      supportedIntents: formData.supportedIntents,
+      buttons: formData.buttons,
+      aiRules: formData.aiRules,
+      aiGoals: formData.aiGoals,
+      aiNotes: formData.aiNotes,
+      status: 'configured' as const,
+    }
+
+    try {
+      await delay(Math.min(debugOptions.mockDelay || 500, 1000))
+
+      if (isNew || !id) {
+        addPage(payload)
+      } else {
+        updatePage(id, payload)
+      }
+
+      window.dispatchEvent(new CustomEvent('ai-assistant-message', {
+        detail: { text: '✅ 已保存' }
+      }))
+
+      navigate('/config/ui')
+    } finally {
+      setIsSaving(false)
+    }
+  }, [addPage, debugOptions.mockDelay, highlight, id, isNew, navigate, formData, isSaving, updatePage])
+
+  // 处理来自 AI 面板的保存指令
+  useEffect(() => {
+    const handler = () => handleSave()
+    window.addEventListener('ui-config-save', handler)
+    return () => window.removeEventListener('ui-config-save', handler)
+  }, [handleSave])
 
   return (
     <div className="h-full flex flex-col">
@@ -218,9 +293,17 @@ export function UIDetailPage() {
               )}
               {isAIFilling ? 'AI 填写中...' : 'AI 辅助填写'}
             </Button>
-            <Button size="sm">
-              <Save className="w-4 h-4 mr-1" />
-              保存
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving || isAIAnalyzing || isAIFilling}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-1" />
+              )}
+              {isSaving ? '保存中...' : '保存'}
             </Button>
           </div>
         </div>
@@ -450,4 +533,3 @@ export function UIDetailPage() {
 }
 
 export default UIDetailPage
-

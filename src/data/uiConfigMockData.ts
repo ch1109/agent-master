@@ -70,25 +70,41 @@ export const aiRecognizedElements = {
 // AI 生成的 UI 配置
 export const aiGeneratedUIConfig = {
   basicInfo: {
-    name: '首页',
-    englishName: 'HomePage',
-    description: '银行App首页，展示账户概览、快捷功能入口和交易记录',
-    pageId: 'page_home_001',
+    name: '收款人信息填写页',
+    englishName: 'PayeeForm',
+    description: '用户在此页填写收款账号、收款人姓名、金额、备注并确认到账方式，提交后完成转账',
+    pageId: 'page_transfer_payee',
   },
   capabilities: {
-    supportedIntents: ['查询余额', '快速转账', '查看账单', '理财咨询'],
+    supportedIntents: ['转账汇款', '填写收款信息', '校验收款账号', '确认转账'],
     clickableButtons: [
-      { label: '转账', action: '跳转到转账页' },
-      { label: '查余额', action: '触发余额查询意图' },
-      { label: '账单', action: '跳转到账单页' },
-      { label: '理财', action: '跳转到理财页' },
+      { label: '收款账号', action: '输入/粘贴收款卡号或手机号' },
+      { label: '收款人姓名', action: '自动带出/填写收款人姓名' },
+      { label: '金额', action: '输入转账金额并校验上限' },
+      { label: '转账备注', action: '填写备注信息' },
+      { label: '到账方式', action: '选择实时到账或普通到账' },
+      { label: '立即转账', action: '提交并发起转账' },
     ],
     parentPage: null,
   },
   aiContext: {
-    rules: '用户在此页面可以快速访问常用功能，AI 应优先引导用户使用页面上的快捷按钮',
-    goals: '帮助用户快速完成常见操作，如查询余额、发起转账等',
-    notes: '注意保护用户隐私信息，余额等敏感信息需要确认后再展示',
+    rules: [
+      '当前页面：转账汇款 - 收款信息填写',
+      '页面目标：帮助用户完成转账操作',
+      '操作状态：正在填写收款信息',
+    ].join('\n'),
+    goals: [
+      '主要引导：协助用户填写收款信息',
+      '输入校验：自动校验账号格式和金额',
+      '风险提示：大额转账主动确认',
+    ].join('\n'),
+    notes: [
+      '安全规则：账号显示需脱敏；提交前二次确认；金额超过5万需提醒风控规则',
+      '话术建议：',
+      '  • 欢迎语：「您好，我可以帮您填写收款信息~」',
+      '  • 确认语：「请确认向 XXX 转账金额 XXX 元」',
+      '  • 完成语：「转账已提交，请留意短信/通知」',
+    ].join('\n'),
   },
 }
 
@@ -290,4 +306,3 @@ export const uiConfigScript = [
     thinkingText: '整理结果',
   },
 ]
-
