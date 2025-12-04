@@ -90,6 +90,7 @@ export function AgentHomePage() {
   const [isRecording, setIsRecording] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
+  const hasMessages = messages.length > 0
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
@@ -268,10 +269,10 @@ export function AgentHomePage() {
         <div className="absolute bottom-12 left-1/3 h-52 w-52 rounded-full bg-[#e7f5ff] blur-3xl" />
       </div>
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-96px)] max-w-[2080px] flex-col justify-center gap-6 px-10 py-14">
-        <div className="grid items-stretch gap-6 xl:grid-cols-[800px,1fr]">
+      <div className="relative mx-auto flex min-h-[calc(100vh-96px)] max-w-[2080px] flex-col justify-center gap-6 px-6 py-10 md:px-10 md:py-12 xl:py-14">
+        <div className="grid items-stretch gap-6 xl:[grid-template-columns:minmax(520px,_0.95fr)_minmax(640px,_1.05fr)] 2xl:grid-cols-[800px,1fr]">
           {/* 左侧信息列，支持两列排布 */}
-          <div className="grid h-full min-h-[1100px] grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid h-full min-h-[880px] grid-cols-1 gap-4 lg:min-h-[940px] lg:grid-cols-2 xl:min-h-[1020px] 2xl:min-h-[1100px]">
             <Card className="border-[var(--border-subtle)] shadow-sm lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
                 <div>
@@ -429,7 +430,7 @@ export function AgentHomePage() {
           </div>
 
           {/* 右侧主工作区 */}
-          <Card className="relative flex min-h-[1100px] flex-col overflow-hidden border-[var(--border-subtle)] bg-white/95 shadow-lg">
+          <Card className="relative flex min-h-[calc(100vh-240px)] flex-col overflow-hidden border-[var(--border-subtle)] bg-white/95 shadow-lg md:min-h-[880px] xl:min-h-[980px] 2xl:min-h-[1080px]">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute inset-x-12 top-4 h-24 rounded-full bg-gradient-to-b from-[#e6ecff] to-transparent blur-xl" />
               <div className="absolute inset-y-8 left-1/3 h-[70%] w-1/2 -translate-x-1/4 rounded-full bg-gradient-to-br from-[#eef2ff] via-transparent to-[#f5f3ff]" />
@@ -444,54 +445,44 @@ export function AgentHomePage() {
               <Badge className="bg-emerald-50 text-emerald-600">在线</Badge>
             </CardHeader>
 
-            <CardContent className="relative flex flex-1 flex-col gap-8 p-10 pb-12 overflow-hidden">
-              <div className="flex flex-1 gap-6 overflow-hidden">
+            <CardContent className="relative flex flex-1 flex-col gap-8 p-8 pb-10 overflow-hidden md:p-10">
+              <div className="flex flex-1 flex-col gap-6 overflow-hidden xl:flex-row">
                 {/* 左侧虚拟人区域 */}
-                <div className={`flex min-h-[770px] shrink-0 flex-col items-center justify-center transition-all duration-500 ${
-                  messages.length === 0 ? 'w-full' : 'w-[576px]'
-                }`}>
-                  <div className="relative flex h-full w-full items-center justify-center">
-                    <video
-                      className="max-h-[860px] w-auto max-w-full object-contain transition-all duration-500"
-                      src={virtualVideoSrc}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="auto"
-                      poster=""
-                      controls={false}
-                    />
+                <div
+                  className="flex min-h-[660px] flex-col items-center justify-center transition-all duration-500"
+                  style={{
+                    flex: hasMessages ? '0 1 auto' : '1 1 0%',
+                    width: hasMessages ? 'clamp(380px, 34vw, 560px)' : 'clamp(470px, 46vw, 700px)',
+                    minWidth: hasMessages ? '320px' : '400px',
+                  }}
+                >
+                  <div className="relative flex w-full max-w-[620px] items-center justify-center">
+                    <div className="relative w-full max-w-[600px] overflow-hidden rounded-[32px] bg-white/40 shadow-inner aspect-[3/4]">
+                      <video
+                        className="absolute inset-0 h-full w-full object-contain transition-all duration-500"
+                        src={virtualVideoSrc}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        poster=""
+                        controls={false}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* 右侧内容区域 */}
                 <div className={`flex flex-1 flex-col transition-all duration-500 ${
-                  messages.length === 0 ? 'items-center justify-center' : 'overflow-y-auto'
+                  hasMessages ? 'overflow-y-auto' : 'items-center justify-center'
                 }`}>
-                  {messages.length === 0 ? (
-                    <div className="w-full max-w-2xl space-y-4 text-center">
+                  {!hasMessages ? (
+                    <div className="w-full max-w-2xl space-y-3 text-center">
                       <p className="text-sm text-[var(--text-secondary)]">
                         您好，我是您的 AI 业务管家，今日系统运行平稳，有 3 个待办任务和 1 条异常日志需要关注。
                       </p>
-
-                      <div className="flex flex-wrap items-center justify-center gap-3">
-                        {quickActions.map((action) => {
-                          const Icon = action.icon
-                          return (
-                            <Button
-                              key={action.label}
-                              variant="outline"
-                              size="sm"
-                              className="gap-2 rounded-full"
-                              onClick={() => handleQuickAction(action.label)}
-                            >
-                              <Icon className="h-4 w-4" />
-                              {action.label}
-                            </Button>
-                          )
-                        })}
-                      </div>
+                      <p className="text-xs text-[var(--text-tertiary)]">可使用下方快捷操作快速开始对话</p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-4 pr-2">
