@@ -81,12 +81,11 @@ function SectionCard({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all',
+        'relative overflow-hidden rounded-xl border border-[#e3eaf7] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition-all',
         highlight && 'ring-2 ring-[var(--color-primary)]/30 border-[var(--color-primary)]/40'
       )}
     >
-      <div className="absolute -right-10 -top-16 h-28 w-28 rounded-full bg-gradient-to-br from-[#dbeafe] to-transparent opacity-70 blur-3xl" aria-hidden />
-      <div className="flex items-start justify-between gap-3 px-5 py-4">
+      <div className="flex items-start justify-between gap-3 px-4 py-3">
         <div className="flex items-start gap-2">
           {icon && <div className="mt-0.5 text-[var(--color-primary)]">{icon}</div>}
           <div>
@@ -96,7 +95,7 @@ function SectionCard({
         </div>
         {action}
       </div>
-      <div className="px-5 pb-5 pt-1">{children}</div>
+      <div className="px-4 pb-4 pt-1">{children}</div>
     </div>
   )
 }
@@ -104,27 +103,42 @@ function SectionCard({
 function StageHeader({
   currentStage,
   progress,
+  overallProgress,
+  onCompleteClick,
   onStageClick,
 }: {
   currentStage: StageKey
   progress: Record<StageKey, number>
+  overallProgress: number
+  onCompleteClick: () => void
   onStageClick: (key: StageKey) => void
 }) {
   const stages = ['stage1', 'stage2', 'stage3', 'stage4'] as StageKey[]
+  const items = [...stages, 'complete'] as const
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {stages.map((stage, idx) => {
-        const isActive = currentStage === stage
-        const pct = progress[stage]
-        const status = pct === 100 ? '已完成' : isActive ? '进行中' : '待开始'
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+      {items.map((stage, idx) => {
+        const isCompleteStep = stage === 'complete'
+        const pct = isCompleteStep ? overallProgress : progress[stage]
+        const isActive = isCompleteStep ? overallProgress === 100 : currentStage === stage
+        const status = isCompleteStep
+          ? pct === 100 ? '可提交' : '待完成'
+          : pct === 100 ? '已完成' : isActive ? '进行中' : '待开始'
         return (
           <button
             key={stage}
             type="button"
-            onClick={() => onStageClick(stage)}
+            onClick={() => {
+              if (isCompleteStep) {
+                onCompleteClick()
+              } else {
+                onStageClick(stage)
+              }
+            }}
             className={cn(
               'relative overflow-hidden rounded-2xl border border-[#e3eaf7] bg-white/75 px-4 py-3 text-left shadow-[0_10px_28px_rgba(15,23,42,0.08)] transition-all backdrop-blur',
-              isActive ? 'ring-2 ring-[var(--color-primary)]/35 border-[var(--color-primary)]/40' : 'hover:-translate-y-[2px]'
+              isActive ? 'ring-2 ring-[var(--color-primary)]/35 border-[var(--color-primary)]/40' : 'hover:-translate-y-[2px]',
+              isCompleteStep && 'border-dashed'
             )}
           >
             <div
@@ -135,26 +149,38 @@ function StageHeader({
               aria-hidden
             />
             {isActive && <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed]" aria-hidden />}
-            <div className="relative flex items-center gap-2 text-xs text-[#64748b]">
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-full border border-[#e3eaf7] bg-white/90 px-2 py-0.5',
-                  isActive && 'border-[var(--color-primary)]/40 text-[var(--color-primary)]'
-                )}
-              >
-                {pct === 100 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
-                {status}
-              </span>
-              <span className="ml-auto text-[11px] text-[#9aa6bf]">步骤 {idx + 1}/4</span>
-            </div>
-            <div className="relative mt-2">
-              <div className="text-sm font-semibold text-[#0f172a]">{stageMeta[stage].title}</div>
-              <p className="text-xs text-[#94a3b8] mt-0.5 line-clamp-2">{stageMeta[stage].desc}</p>
-            </div>
+            {!isCompleteStep ? (
+              <>
+                <div className="relative flex items-center gap-2 text-xs text-[#64748b]">
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full border border-[#e3eaf7] bg-white/90 px-2 py-0.5',
+                      isActive && 'border-[var(--color-primary)]/40 text-[var(--color-primary)]'
+                    )}
+                  >
+                    {pct === 100 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                    {status}
+                  </span>
+                  <span className="ml-auto text-[11px] text-[#9aa6bf]">步骤 {idx + 1}/5</span>
+                </div>
+                <div className="relative mt-2">
+                  <div className="text-sm font-semibold text-[#0f172a]">{stageMeta[stage].title}</div>
+                  <p className="text-xs text-[#94a3b8] mt-0.5 line-clamp-2">{stageMeta[stage].desc}</p>
+                </div>
+              </>
+            ) : (
+              <div className="relative flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-sm font-semibold text-[#0f172a]">完成创建</div>
+                  <p className="text-xs text-[#94a3b8] mt-0.5">提交并导出配置</p>
+                </div>
+                <CheckCircle2 className={cn('h-5 w-5', pct === 100 ? 'text-[var(--color-success)]' : 'text-[#cbd5e1]')} />
+              </div>
+            )}
             <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-[#ecf1fb]">
               <div
                 className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
-                style={{ width: `${pct}%` }}
+                style={{ width: `${Math.min(pct, 100)}%` }}
               />
             </div>
           </button>
@@ -379,6 +405,15 @@ export function AgentCreatePage() {
     const vals = Object.values(progress)
     return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
   }, [progress])
+
+  const handleCompleteClick = () => {
+    if (overallProgress === 100) {
+      setShowSuccess(true)
+      return
+    }
+    goStage('stage4')
+    pulseHighlight('stage4')
+  }
 
   const isFieldHighlight = (stage: StageKey, key: string) => highlightField?.stage === stage && highlightField.key === key
 
@@ -1239,14 +1274,9 @@ export function AgentCreatePage() {
   }
 
   return (
-    <div className="relative h-full overflow-auto bg-gradient-to-b from-[#f8fafc] via-[#f8fbff] to-[#eef2ff]">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-24 top-8 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,#dbeafe,transparent_55%)] blur-3xl opacity-70" />
-        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,#e0e7ff,transparent_55%)] blur-3xl opacity-60" />
-        <div className="absolute left-1/2 bottom-0 h-64 w-64 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,#c7d2fe,transparent_55%)] blur-3xl opacity-40" />
-      </div>
-      <div className="relative z-10 mx-auto max-w-6xl space-y-6 px-6 py-8 lg:max-w-7xl lg:px-10">
-        <div className="flex flex-col gap-2">
+    <div className="relative h-full overflow-auto bg-[#f6f8fc]">
+      <div className="relative z-10 mx-auto w-full max-w-[96rem] px-2.5 py-10 lg:px-4 lg:py-12">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6b7b9d]">Agent Master · 创建向导</p>
@@ -1254,76 +1284,95 @@ export function AgentCreatePage() {
               <p className="text-sm text-[#64748b]">{showSuccess ? '你的数字员工已成功创建并准备就绪' : '参考示例完成画像定义、形象生成、能力装配与记忆进化'}</p>
             </div>
             {!showSuccess && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm text-[#2563eb] shadow-[0_12px_28px_rgba(37,99,235,0.2)]">
-                <div className="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                <span>整体完成度 {overallProgress}%</span>
+              <div className="flex items-center gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-medium text-[#2563eb] shadow-[0_10px_18px_rgba(37,99,235,0.18)]">
+                  <div className="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                  <span>整体完成度 {overallProgress}%</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCompleteClick}
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_26px_rgba(37,99,235,0.25)] transition hover:brightness-105"
+                >
+                  完成创建 <CheckCircle2 className="h-4 w-4" />
+                </button>
               </div>
             )}
           </div>
         </div>
 
-        {!showSuccess && <StageHeader currentStage={currentStage} progress={progress} onStageClick={goStage} />}
+        <div className="mt-6 rounded-2xl border border-[#e3eaf7] bg-white/98 px-4 py-5 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:px-6 lg:py-6 space-y-4">
+          {!showSuccess && (
+            <StageHeader
+              currentStage={currentStage}
+              progress={progress}
+              overallProgress={overallProgress}
+              onCompleteClick={handleCompleteClick}
+              onStageClick={goStage}
+            />
+          )}
 
-        <div className="space-y-4">
-          {!showSuccess && currentStage === 'stage1' && renderStage1()}
-          {!showSuccess && currentStage === 'stage2' && renderStage2()}
-          {!showSuccess && currentStage === 'stage3' && renderStage3()}
-          {!showSuccess && currentStage === 'stage4' && renderStage4()}
-          {showSuccess && renderSuccess()}
-        </div>
+          <div className="space-y-4">
+            {!showSuccess && currentStage === 'stage1' && renderStage1()}
+            {!showSuccess && currentStage === 'stage2' && renderStage2()}
+            {!showSuccess && currentStage === 'stage3' && renderStage3()}
+            {!showSuccess && currentStage === 'stage4' && renderStage4()}
+            {showSuccess && renderSuccess()}
+          </div>
 
-        {!showSuccess && (
-          <div className="flex flex-col gap-3 border-t border-[#e4eaf5] pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={prevStage}
-              disabled={currentStage === 'stage1'}
-              className={cn(
-                'inline-flex items-center gap-1 text-sm text-[#64748b] transition hover:text-[var(--color-primary)]',
-                currentStage === 'stage1' && 'cursor-not-allowed text-[#c0c8da]'
-              )}
-            >
-              <ChevronLeft className="h-4 w-4" /> 上一步
-            </button>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-[#64748b]">已完成 {overallProgress}%</span>
-              {currentStage === 'stage4' && overallProgress === 100 ? (
-                <button
-                  type="button"
-                  onClick={() => setShowSuccess(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(16,185,129,0.28)] transition hover:brightness-105"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  完成创建
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={nextStage}
-                  disabled={currentStage === 'stage4'}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(37,99,235,0.28)] transition hover:brightness-105',
-                    currentStage === 'stage4' && 'cursor-not-allowed opacity-60 hover:brightness-100'
-                  )}
-                >
-                  下一步 <ChevronRight className="h-4 w-4" />
-                </button>
-              )}
+          {!showSuccess && (
+            <div className="flex flex-col gap-3 border-t border-[#e4eaf5] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={prevStage}
+                disabled={currentStage === 'stage1'}
+                className={cn(
+                  'inline-flex items-center gap-1 text-sm text-[#64748b] transition hover:text-[var(--color-primary)]',
+                  currentStage === 'stage1' && 'cursor-not-allowed text-[#c0c8da]'
+                )}
+              >
+                <ChevronLeft className="h-4 w-4" /> 上一步
+              </button>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-[#64748b]">已完成 {overallProgress}%</span>
+                {currentStage === 'stage4' && overallProgress === 100 ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowSuccess(true)}
+                    className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(16,185,129,0.28)] transition hover:brightness-105"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    完成创建
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={nextStage}
+                    disabled={currentStage === 'stage4'}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(37,99,235,0.28)] transition hover:brightness-105',
+                      currentStage === 'stage4' && 'cursor-not-allowed opacity-60 hover:brightness-100'
+                    )}
+                  >
+                    下一步 <ChevronRight className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {showSuccess && (
-          <div className="flex justify-center border-t border-[#e4eaf5] pt-4">
-            <button
-              type="button"
-              onClick={() => setShowSuccess(false)}
-              className="inline-flex items-center gap-1 text-sm text-[#64748b] transition hover:text-[var(--color-primary)]"
-            >
-              <ChevronLeft className="h-4 w-4" /> 返回编辑
-            </button>
-          </div>
-        )}
+          {showSuccess && (
+            <div className="flex justify-center border-t border-[#e4eaf5] pt-4">
+              <button
+                type="button"
+                onClick={() => setShowSuccess(false)}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(37,99,235,0.28)] transition hover:brightness-105"
+              >
+                返回编辑 <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

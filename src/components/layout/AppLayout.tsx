@@ -21,12 +21,12 @@ export function AppLayout({ children, showAssistant = true }: AppLayoutProps) {
       
       {/* 主工作区 + AI助手 - 可拖拽调整 */}
       {showAssistant ? (
-        <PanelGroup direction="horizontal" className="flex-1">
+        <PanelGroup direction="horizontal" className="flex-1 gap-2 px-3 py-2">
           {/* 主工作区 */}
           <Panel 
             defaultSize={70} 
             minSize={40}
-            className="flex flex-col"
+            className="flex flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] shadow-sm"
           >
             <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--bg-base)]">
               {children}
@@ -41,7 +41,7 @@ export function AppLayout({ children, showAssistant = true }: AppLayoutProps) {
             defaultSize={30}
             minSize={20}
             maxSize={45}
-            className="flex flex-col"
+            className="flex flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] shadow-sm"
           >
             <ScenarioAIAssistant />
           </Panel>
