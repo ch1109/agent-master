@@ -20,6 +20,9 @@ export interface OptionItem {
   description?: string
   icon?: string
   selected?: boolean
+  recommended?: boolean
+  features?: string[]
+  platforms?: string[]
 }
 
 // 表单字段

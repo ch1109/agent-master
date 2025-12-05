@@ -976,7 +976,7 @@
         "userInput": "B，我想要一个融合摩尔线程设计理念的可爱3D机器人，科技感但又有亲和力",
         "agentMessage": {
           "enthusiasm": "很棒的方向！🎨",
-          "summary": ""可爱3D机器人 + 科技感 + 亲和力" —— 这个组合很有画面感",
+          "summary": "\"可爱3D机器人 + 科技感 + 亲和力\" —— 这个组合很有画面感",
           "refinement": "让我帮你细化几个关键要素，确保生成的形象符合你的预期：",
           "dimensions": [
             {
@@ -1019,59 +1019,107 @@
                 },
                 {
                   "value": "D",
-                  "label": "微缩/精灵体 - 极小体型，轻盈感"
+                  "label": "壮硕/夸张 - 力量感"
                 }
               ]
             },
             {
-              "title": "🌈 3. 主色调",
+              "title": "🎨 3. 颜色与元素",
               "options": [
                 {
                   "value": "A",
-                  "label": "暖橙色系 - 活力、友好、有温度",
+                  "label": "暖橙 + 科技蓝光晕",
                   "default": true
                 },
                 {
                   "value": "B",
-                  "label": "科技蓝系 - 专业、可信、冷静"
+                  "label": "纯白 + 细节镭射"
                 },
                 {
                   "value": "C",
-                  "label": "清新绿系 - 自然、成长、轻松"
+                  "label": "黑银 + 霓虹线条"
                 },
                 {
                   "value": "D",
-                  "label": "渐变紫系 - 创意、神秘、高级感"
+                  "label": "低饱和莫兰迪"
                 }
-              ]
-            },
-            {
-              "title": "✨ 4. 特色元素（多选）",
-              "multiSelect": true,
-              "options": [
-                "屏幕/显示面板 - 可以显示表情或状态",
-                "天线/触角 - 信号连接的隐喻",
-                "发光效果 - 科技感光晕",
-                "品牌标识位 - 胸前可放Logo",
-                "流程/节点元素 - 呼应工作流主题"
+              ],
+              "suggestedElements": [
+                "屏幕/显示面板",
+                "天线/触角",
+                "发光效果",
+                "品牌标识位"
               ]
             }
           ],
-          "prompt": "💡 快速选择格式：A、A、A、屏幕+天线+发光+品牌标识 或者用自己的话补充细节"
+          "prompt": "💡 直接告诉我你更喜欢哪个组合，或者补充元素（Logo 位置、配件等）"
+        },
+        "autoFillBehavior": {
+          "trigger": "agentMessage_rendered",
+          "condition": "看到「很棒的方向！🎨」这条话术后立即启动自填写",
+          "sequence": [
+            {
+              "action": "fill",
+              "field": "characterSettings",
+              "value": "名字叫「小流」，一个Q版体型的3D机器人。全身采用圆润萌系设计，像棉花糖一样柔软，拥有一个可显示表情的矩形屏幕头部，眼神充满智慧和友善。头顶有两根短天线，象征信号连接。身体呈暖橙色，搭配科技蓝光晕，胸前有品牌标识位。整体散发着科技感与亲和力并存的气质。"
+            },
+            {
+              "action": "fill",
+              "field": "visualStyle",
+              "value": "3D渲染风格（皮克斯风）"
+            },
+            {
+              "action": "fill",
+              "field": "characterForm",
+              "value": "机械科技系 - AI机器人"
+            },
+            {
+              "action": "fill",
+              "field": "bodyProportion",
+              "value": "Q版/二头身"
+            },
+            {
+              "action": "fill",
+              "field": "colorScheme",
+              "value": "暖橙 + 科技蓝光晕"
+            },
+            {
+              "action": "fill",
+              "field": "specialElements",
+              "value": [
+                "屏幕/显示面板",
+                "天线/触角",
+                "发光效果",
+                "品牌标识位"
+              ]
+            },
+            {
+              "action": "click",
+              "target": "立即生成",
+              "nextStage": "stage2_image_generation",
+              "description": "逐个填充后自动触发生图，跳转到形象生成页面 2"
+            }
+          ],
+          "animation": {
+            "type": "sequential_fill",
+            "delayMsBetweenSteps": 250
+          }
         }
       },
       {
         "round": 7,
         "stage": "stage2_image_generation",
-        "userInput": "A、A、A、屏幕+天线+发光效果+品牌标识位",
+        "userInput": "系统自动选择默认组合（圆润萌系 / Q版二头身 / 暖橙+科技蓝光晕），触发生成",
         "agentMessage": {
-          "confirmation": "完美！✓ 形象需求已锁定",
+          "confirmation": "完美！✓ 形象需求已锁定（已自动填写并提交生成）",
           "autoFill": {
             "title": "✅ 我已经帮你在左侧填写了形象配置：",
             "characterSettings": "名字叫「小流」，一个Q版体型的3D机器人。全身采用圆润萌系设计，像棉花糖一样柔软，拥有一个可显示表情的矩形屏幕头部，眼神充满智慧和友善。头顶有两根短天线，象征信号连接。身体呈暖橙色，搭配科技蓝光晕，胸前有品牌标识位。整体散发着科技感与亲和力并存的气质。",
             "visualStyle": "3D渲染风格（皮克斯风）",
             "characterForm": "机械科技系 - AI机器人",
-            "bodyProportion": "Q版/二头身"
+            "bodyProportion": "Q版/二头身",
+            "colorScheme": "暖橙 + 科技蓝光晕",
+            "specialElements": "屏幕/显示面板 + 天线/触角 + 发光效果 + 品牌标识位"
           },
           "generating": "🖼️ 正在为你生成 4 张候选形象...",
           "nextAction": {
@@ -1593,7 +1641,7 @@
       "action": "前端根据预设脚本匹配下一轮对话"
     },
     "step2": {
-      "trigger": "用户选择完成",
+      "trigger": "用户选择完成 / 系统自填写完成",
       "action": "根据选择映射到配置字段"
     },
     "step3": {
@@ -1614,10 +1662,19 @@
     }
   },
   "specialHandling": {
+    "autoFillOnAppearancePrompt": {
+      "description": "当出现「很棒的方向！🎨 ...」话术时，立即启动默认自填写并自动点击「立即生成」",
+      "steps": [
+        "监听 conversationFlow.round === 6 或 agentMessage.enthusiasm 包含对应短语",
+        "顺序填充：角色设定 → 视觉风格 → 角色形态 → 体型比例 → 配色与元素（colorScheme + specialElements）",
+        "每步填充间隔 200-400ms，保持动态反馈",
+        "填完后程序触发「立即生成」按钮，调用 simulateImageGeneration() 并跳转到 stage2_image_generation 页面（形象生成页面 2）"
+      ]
+    },
     "imageGeneration": {
       "description": "模拟生成过程",
       "steps": [
-        "用户点击「生成形象」按钮",
+        "用户点击/自动触发「生成形象」按钮",
         "显示生成动画（3秒，逐帧显示文案）",
         "动画结束后显示4张预制图片",
         "用户选择其中一张"

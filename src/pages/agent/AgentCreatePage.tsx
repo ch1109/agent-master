@@ -9,16 +9,11 @@ import {
   Circle,
   UserRound,
   Image as ImageIcon,
-  ShieldCheck,
   Brain,
   Shield,
-  Search,
-  Code2,
-  FileText,
-  Workflow,
   Image,
-  FileCog,
-  Activity,
+  Cpu,
+  Rocket,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgentCreationStore } from '@/stores/agentCreationStore'
@@ -34,7 +29,18 @@ import {
   scenarioOptions,
   placeholderImages,
   generationModels,
+  memoryExamples,
+  optimizationCapabilities,
 } from '@/data/agentCreationOptions'
+import {
+  StyleOptionCard,
+  ToolCard,
+  PermissionCard,
+  MemoryCompareCard,
+  ScenarioCard,
+  MemoryOptionCard,
+  OptimizationCapabilities,
+} from '@/components/agent-create'
 
 type StageKey = 'stage1' | 'stage2' | 'stage3' | 'stage4'
 
@@ -54,48 +60,6 @@ const DELAY_STAGE4 = 400 * FILL_SPEED
 const DELAY_STAGE_SWITCH = 600 * FILL_SPEED
 const DELAY_PULSE = 120 * FILL_SPEED
 const DELAY_PERMISSION = 500 * FILL_SPEED
-
-function Chip({
-  label,
-  description,
-  selected,
-  onClick,
-  icon,
-  size = 'md',
-  highlight = false,
-}: {
-  label: string
-  description?: string
-  selected?: boolean
-  onClick?: () => void
-  icon?: React.ReactNode
-  size?: 'sm' | 'md'
-  highlight?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'group w-full text-left rounded-xl border transition-all px-3 py-2 bg-white/80 hover:-translate-y-[1px] shadow-[0_6px_18px_rgba(15,23,42,0.06)] backdrop-blur',
-        selected ? 'border-[var(--color-primary)]/50 bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] text-[var(--color-primary)]' : 'border-[#e3eaf7] text-[var(--text-secondary)] hover:border-[var(--color-primary)]/40',
-        highlight && 'ring-2 ring-[var(--color-primary)]/50 border-[var(--color-primary)]/60',
-        size === 'sm' ? 'py-2 text-sm' : 'py-2.5 text-base'
-      )}
-    >
-      <div className="flex items-start gap-2">
-        {icon}
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{label}</span>
-            {selected && <CheckCircle2 className="w-4 h-4 text-[var(--color-primary)]" />}
-          </div>
-          {description && <p className="text-sm text-[var(--text-secondary)] mt-0.5">{description}</p>}
-        </div>
-      </div>
-    </button>
-  )
-}
 
 function SectionCard({
   title,
@@ -282,6 +246,46 @@ export function AgentCreatePage() {
           schedule(() => { updateStage1({ agentName: '小流' }); pulseField('stage1', 'agentName') }, 0)
           schedule(() => { goStage('stage2'); pulseHighlight('stage2') }, DELAY_STAGE_SWITCH)
           break;
+        case 'fill-stage2-config-and-generate':
+          // 用户回复后，自动填充形象配置并生成
+          clearFillTimers()
+          goStage('stage2')
+          setAppearanceStep('config')
+          {
+            const steps = [
+              () => {
+                updateStage2({
+                  characterSettings: '名字叫「小流」，一个Q版体型的3D机器人。全身采用圆润萌系设计，像棉花糖一样柔软，拥有一个可显示表情的矩形屏幕头部，眼神充满智慧和友善。头顶有两根短天线，象征信号连接。身体呈暖橙色，搭配科技蓝光晕，胸前有品牌标识位。整体散发着科技感与亲和力并存的气质。'
+                })
+                pulseField('stage2', 'characterSettings')
+              },
+              () => { updateStage2({ visualStyle: '3D 渲染' }); pulseField('stage2', 'visualStyle') },
+              () => { updateStage2({ characterForm: '机械科技' }); pulseField('stage2', 'characterForm') },
+              () => { updateStage2({ bodyProportion: 'Q 版/二头身' }); pulseField('stage2', 'bodyProportion') },
+              () => {
+                // 填充完成，自动切换到生成页面并启动生成
+                setAppearanceStep('generate')
+                setActionsUnlocked(false)
+                updateStage2({ selectedImageId: null })
+                setGenerationStep(0)
+                setGenerating(true)
+                if (genProgressTimerRef.current) clearInterval(genProgressTimerRef.current)
+                if (genCompleteTimerRef.current) clearTimeout(genCompleteTimerRef.current)
+                let stepCounter = 0
+                genProgressTimerRef.current = setInterval(() => {
+                  stepCounter = Math.min(stepCounter + 1, 3)
+                  setGenerationStep(stepCounter)
+                }, 2000)
+                genCompleteTimerRef.current = setTimeout(() => {
+                  setGenerating(false)
+                  if (genProgressTimerRef.current) clearInterval(genProgressTimerRef.current)
+                }, 8000)
+              },
+            ]
+            steps.forEach((fn, idx) => schedule(fn, idx * DELAY_STAGE2))
+            schedule(() => pulseHighlight('stage2'), steps.length * DELAY_STAGE2 + DELAY_PULSE)
+          }
+          break;
         case 'fill-stage2-prepare': {
           goStage('stage2')
           setGenerating(true)
@@ -313,6 +317,8 @@ export function AgentCreatePage() {
             ]
             steps.forEach((fn, idx) => schedule(fn, idx * DELAY_STAGE2))
             schedule(() => pulseHighlight('stage2'), steps.length * DELAY_STAGE2 + DELAY_PULSE)
+            // 填充完成后自动跳转到 stage3
+            schedule(() => { goStage('stage3'); pulseHighlight('stage3') }, steps.length * DELAY_STAGE2 + DELAY_PULSE + DELAY_STAGE_SWITCH)
           }
           break;
         case 'fill-stage3-tools':
@@ -332,6 +338,8 @@ export function AgentCreatePage() {
           goStage('stage3')
           schedule(() => { updateStage3({ permissionLevel: 'L2' }); pulseField('stage3', 'permissionLevel') }, 0)
           schedule(() => pulseHighlight('stage3'), DELAY_PERMISSION)
+          // 填充完成后自动跳转到 stage4
+          schedule(() => { goStage('stage4'); pulseHighlight('stage4') }, DELAY_PERMISSION + DELAY_STAGE_SWITCH)
           break;
         case 'fill-stage4':
           clearFillTimers()
@@ -359,7 +367,7 @@ export function AgentCreatePage() {
       if (genCompleteTimerRef.current) clearTimeout(genCompleteTimerRef.current)
       clearFillTimers()
     }
-  }, [applyPresetStage1, applyPresetStage2, applyPresetStage3, applyPresetStage4, goStage, setGenerationStep, setGenerating, updateStage1, updateStage2, updateStage3, updateStage4, toggleArrayField])
+  }, [applyPresetStage1, applyPresetStage2, applyPresetStage3, applyPresetStage4, goStage, setGenerationStep, setGenerating, setAppearanceStep, setActionsUnlocked, updateStage1, updateStage2, updateStage3, updateStage4, toggleArrayField])
 
   const overallProgress = useMemo(() => {
     const vals = Object.values(progress)
@@ -374,8 +382,6 @@ export function AgentCreatePage() {
     cn(baseInput, isFieldHighlight(stage, key) && 'ring-2 ring-[var(--color-primary)]/50 border-[var(--color-primary)]/50')
   const textareaClass = (stage: StageKey, key: string) =>
     cn(baseInput, 'min-h-[108px] resize-none leading-relaxed align-top', isFieldHighlight(stage, key) && 'ring-2 ring-[var(--color-primary)]/50 border-[var(--color-primary)]/50')
-  const quickOptionClass =
-    'inline-flex items-center gap-1 rounded-full border border-[#e3eaf7] bg-white/90 px-3 py-1.5 text-xs text-[#64748b] shadow-[0_6px_18px_rgba(15,23,42,0.05)] transition-all hover:-translate-y-[1px] hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)]'
 
   const startImageGeneration = () => {
     setAppearanceStep('generate')
@@ -551,13 +557,17 @@ export function AgentCreatePage() {
           </SectionCard>
 
           <SectionCard title="风格 / 形态 / 比例" description="快速选择视觉基调与角色形态" highlight={highlightStage === 'stage2'}>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-[#0f172a]">视觉风格</p>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">🎨</span>
+                  视觉风格
+                </p>
                 <div className="flex flex-col gap-2">
                   {visualStyleOptions.map(opt => (
-                    <Chip
+                    <StyleOptionCard
                       key={opt.id}
+                      icon={opt.icon}
                       label={opt.label}
                       description={opt.description}
                       selected={stage2.visualStyle === opt.label}
@@ -567,12 +577,16 @@ export function AgentCreatePage() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-[#0f172a]">角色形态</p>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">🎭</span>
+                  角色形态
+                </p>
                 <div className="flex flex-col gap-2">
                   {characterFormOptions.map(opt => (
-                    <Chip
+                    <StyleOptionCard
                       key={opt.id}
+                      icon={opt.icon}
                       label={opt.label}
                       description={opt.description}
                       selected={stage2.characterForm === opt.label}
@@ -582,12 +596,16 @@ export function AgentCreatePage() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-[#0f172a]">比例体型</p>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">📐</span>
+                  比例体型
+                </p>
                 <div className="flex flex-col gap-2">
                   {bodyProportionOptions.map(opt => (
-                    <Chip
+                    <StyleOptionCard
                       key={opt.id}
+                      icon={opt.icon}
                       label={opt.label}
                       description={opt.description}
                       selected={stage2.bodyProportion === opt.label}
@@ -765,132 +783,184 @@ export function AgentCreatePage() {
     </div>
   )
 
-  const toolIcons: Record<string, React.ReactNode> = {
-    web_search: <Search className="h-4 w-4 text-[#2563eb]" />,
-    code_execution: <Code2 className="h-4 w-4 text-[#2563eb]" />,
-    document_generation: <FileText className="h-4 w-4 text-[#2563eb]" />,
-    flow_chart: <Workflow className="h-4 w-4 text-[#2563eb]" />,
-    image_processing: <Image className="h-4 w-4 text-[#2563eb]" />,
-    file_processing: <FileCog className="h-4 w-4 text-[#2563eb]" />,
-    api_testing: <Activity className="h-4 w-4 text-[#2563eb]" />,
-  }
-
   const renderStage3 = () => (
-    <div className="grid gap-4 xl:grid-cols-3">
-      <div className="xl:col-span-2 space-y-4">
+    <div className="space-y-4">
+      {/* 装备栏预览 */}
+      <div className="rounded-2xl border border-[#e3eaf7] bg-gradient-to-r from-white/90 to-[#f8faff]/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-5 w-5 text-[var(--color-primary)]" />
+            <span className="text-sm font-semibold text-[#0f172a]">已装备能力</span>
+            <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-xs text-[var(--color-primary)]">
+              {stage3.selectedTools.length}/7
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {stage3.permissionLevel && (
+              <span className="rounded-full bg-gradient-to-r from-[#2563eb]/10 to-[#7c3aed]/10 px-3 py-1 text-xs font-medium text-[var(--color-primary)]">
+                {permissionOptions.find(p => p.id === stage3.permissionLevel)?.label}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {stage3.selectedTools.length === 0 ? (
+            <span className="text-sm text-[#94a3b8]">暂未装备任何能力，请从下方选择</span>
+          ) : (
+            stage3.selectedTools.map(toolId => {
+              const tool = toolOptions.find(t => t.id === toolId)
+              return tool ? (
+                <span
+                  key={toolId}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] px-3 py-1.5 text-sm text-[var(--color-primary)] border border-[var(--color-primary)]/20"
+                >
+                  <span>{tool.icon}</span>
+                  {tool.label}
+                </span>
+              ) : null
+            })
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <div className="xl:col-span-2 space-y-4">
+          <SectionCard
+            title="技能仓库"
+            description="精选工具与技能包，已按场景推荐"
+            icon={<Sparkles className="h-5 w-5" />}
+            action={
+              <button
+                type="button"
+                onClick={() => applyPresetStage3()}
+                className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3.5 py-1.5 text-xs font-medium text-white shadow-[0_12px_28px_rgba(37,99,235,0.2)] transition hover:brightness-105"
+              >
+                <Sparkles className="h-4 w-4" /> 一键全选推荐
+              </button>
+            }
+            highlight={highlightStage === 'stage3'}
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              {toolOptions.map(tool => (
+                <ToolCard
+                  key={tool.id}
+                  icon={tool.icon}
+                  label={tool.label}
+                  description={tool.description}
+                  selected={stage3.selectedTools.includes(tool.id)}
+                  highlight={isFieldHighlight('stage3', 'selectedTools')}
+                  recommended={tool.recommended}
+                  onClick={() => toggleArrayField('stage3', 'selectedTools', tool.id)}
+                />
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+
         <SectionCard
-          title="能力装配"
-          description="精选工具与技能包，已按场景推荐"
-          icon={<Sparkles className="h-5 w-5" />}
-          action={
-            <button
-              type="button"
-              onClick={() => applyPresetStage3()}
-              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3.5 py-1.5 text-xs font-medium text-white shadow-[0_12px_28px_rgba(37,99,235,0.2)] transition hover:brightness-105"
-            >
-              <Sparkles className="h-4 w-4" /> 一键全选推荐
-            </button>
-          }
+          title="权限设置"
+          description="选择执行权限边界"
+          icon={<Shield className="h-5 w-5" />}
           highlight={highlightStage === 'stage3'}
         >
-          <div className="grid gap-3 md:grid-cols-2">
-            {toolOptions.map(tool => {
-              const selected = stage3.selectedTools.includes(tool.id)
-              return (
-                <button
-                  key={tool.id}
-                  type="button"
-                  onClick={() => toggleArrayField('stage3', 'selectedTools', tool.id)}
-                  className={cn(
-                    'flex items-center gap-3 rounded-2xl border border-[#e3eaf7] bg-white/80 px-3.5 py-3 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur transition hover:-translate-y-[1px]',
-                    selected && 'border-[var(--color-primary)]/60 bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] ring-1 ring-[var(--color-primary)]/30',
-                    isFieldHighlight('stage3', 'selectedTools') && 'ring-2 ring-[var(--color-primary)]/50'
-                  )}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e5edff] text-[var(--color-primary)]">
-                    {toolIcons[tool.id] || <Sparkles className="h-4 w-4" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-[#0f172a]">{tool.label}</p>
-                    <p className="text-xs text-[#64748b]">{tool.description}</p>
-                  </div>
-                  {selected && <CheckCircle2 className="h-4 w-4 text-[var(--color-primary)]" />}
-                </button>
-              )
-            })}
+          <div className="space-y-3">
+            {permissionOptions.map(opt => (
+              <PermissionCard
+                key={opt.id}
+                icon={opt.icon}
+                label={opt.label}
+                description={opt.description}
+                features={opt.features}
+                selected={stage3.permissionLevel === opt.id}
+                highlight={isFieldHighlight('stage3', 'permissionLevel')}
+                recommended={opt.recommended}
+                onClick={() => updateStage3({ permissionLevel: opt.id })}
+              />
+            ))}
           </div>
         </SectionCard>
       </div>
-
-      <SectionCard title="权限设置" description="选择执行权限边界" icon={<Shield className="h-5 w-5" />} highlight={highlightStage === 'stage3'}>
-        <div className="space-y-2">
-          {permissionOptions.map(opt => {
-            const active = stage3.permissionLevel === opt.id
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => updateStage3({ permissionLevel: opt.id })}
-                className={cn(
-                  'flex items-start justify-between rounded-2xl border border-[#e3eaf7] bg-white/80 px-3.5 py-3 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px]',
-                  active && 'border-[var(--color-primary)]/60 bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] ring-1 ring-[var(--color-primary)]/30',
-                  isFieldHighlight('stage3', 'permissionLevel') && 'ring-2 ring-[var(--color-primary)]/50'
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <ShieldCheck className={cn('h-4 w-4', active ? 'text-[var(--color-primary)]' : 'text-[#94a3b8]')} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[#0f172a]">{opt.label}</p>
-                    <p className="text-xs text-[#64748b]">{opt.description}</p>
-                  </div>
-                </div>
-                {active && <CheckCircle2 className="h-4 w-4 text-[var(--color-primary)]" />}
-              </button>
-            )
-          })}
-        </div>
-      </SectionCard>
     </div>
   )
 
   const renderStage4 = () => (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <SectionCard title="记忆功能" description="选择记忆范围与留存策略" icon={<Shield className="h-5 w-5" />} highlight={highlightStage === 'stage4'}>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {memoryOptions.map(opt => (
-            <Chip
-              key={opt.id}
-              label={opt.label}
-              selected={stage4.memoryDuration === opt.id}
-              highlight={isFieldHighlight('stage4', 'memoryDuration')}
-              onClick={() => updateStage4({ memoryDuration: opt.id })}
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* 记忆功能 */}
+        <SectionCard
+          title="记忆功能"
+          description="让 Agent 记住用户偏好和历史交互"
+          icon={<Brain className="h-5 w-5" />}
+          highlight={highlightStage === 'stage4'}
+        >
+          <div className="space-y-4">
+            {/* 记忆效果对比 */}
+            <MemoryCompareCard
+              withoutMemory={memoryExamples.withoutMemory}
+              withMemory={memoryExamples.withMemory}
             />
-          ))}
-        </div>
-      </SectionCard>
+            {/* 记忆时长选项 */}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {memoryOptions.map(opt => (
+                <MemoryOptionCard
+                  key={opt.id}
+                  icon={opt.icon}
+                  label={opt.label}
+                  description={opt.description}
+                  selected={stage4.memoryDuration === opt.id}
+                  highlight={isFieldHighlight('stage4', 'memoryDuration')}
+                  recommended={opt.recommended}
+                  onClick={() => updateStage4({ memoryDuration: opt.id })}
+                />
+              ))}
+            </div>
+          </div>
+        </SectionCard>
 
-      <SectionCard title="自优化功能" description="让 Agent 越用越懂你" icon={<Sparkles className="h-5 w-5" />} highlight={highlightStage === 'stage4'}>
-        <div className="grid gap-2 sm:grid-cols-1">
-          {optimizationOptions.map(opt => (
-            <Chip
-              key={opt.id}
-              label={opt.label}
-              selected={stage4.selfOptimization === opt.id}
-              highlight={isFieldHighlight('stage4', 'selfOptimization')}
-              onClick={() => updateStage4({ selfOptimization: opt.id })}
-            />
-          ))}
-        </div>
-      </SectionCard>
+        {/* 自优化功能 */}
+        <SectionCard
+          title="自优化功能"
+          description="让 Agent 越用越懂你"
+          icon={<Sparkles className="h-5 w-5" />}
+          highlight={highlightStage === 'stage4'}
+        >
+          <div className="space-y-4">
+            {/* 优化能力列表 */}
+            <OptimizationCapabilities capabilities={optimizationCapabilities} />
+            {/* 优化模式选项 */}
+            <div className="space-y-2">
+              {optimizationOptions.map(opt => (
+                <MemoryOptionCard
+                  key={opt.id}
+                  icon={opt.icon}
+                  label={opt.label}
+                  description={opt.description}
+                  selected={stage4.selfOptimization === opt.id}
+                  highlight={isFieldHighlight('stage4', 'selfOptimization')}
+                  recommended={opt.recommended}
+                  onClick={() => updateStage4({ selfOptimization: opt.id })}
+                />
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+      </div>
 
-      <SectionCard title="应用场景" description="可多选" icon={<ImageIcon className="h-5 w-5" />} highlight={highlightStage === 'stage4'}>
-        <div className="grid gap-2 sm:grid-cols-2">
+      {/* 应用场景 */}
+      <SectionCard
+        title="应用场景"
+        description="选择 Agent 的部署方式（可多选）"
+        icon={<Rocket className="h-5 w-5" />}
+        highlight={highlightStage === 'stage4'}
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {scenarioOptions.map(opt => (
-            <Chip
+            <ScenarioCard
               key={opt.id}
+              icon={opt.icon}
               label={opt.label}
+              description={opt.description}
+              platforms={opt.platforms}
               selected={stage4.applicationScenarios.includes(opt.id)}
               highlight={isFieldHighlight('stage4', 'applicationScenarios')}
               onClick={() => toggleArrayField('stage4', 'applicationScenarios', opt.id)}

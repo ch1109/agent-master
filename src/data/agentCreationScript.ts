@@ -34,15 +34,6 @@ export const agentCreationScript: AgentCreationScriptStep[] = [
     response: {
       type: 'text',
       text: `完美！✓ 你的定位非常清晰了\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📊 基于你的需求，我已经帮你在左侧填写了完整的画像配置：\n\n✓ 主要职责/定位：全能型工作流搭建导师，面向有编程基础的产品开发者，用真实案例驱动教学\n✓ 服务场景：工作流自动化学习与产品集成\n✓ 目标用户群体：有编程基础的产品开发者\n✓ 核心能力需求：\n  - 工作流基础概念到高阶实战\n  - n8n/Dify/Coze（可视化编排）教学\n  - LangChain/Agent编排（代码框架）教学\n  - 根据场景灵活推荐最优工具\n✓ 性格特征：务实高效，善于总结方法论\n✓ 沟通风格：效率优先，用开发者语言交流\n✓ 专业领域：自动化/工作流/效率工具\n✓ 特殊技能：流程设计、节点调试、API对接\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🎯 接下来你需要：\n1. 给这个 Agent 起个名字（建议：小流 / 流程师 / FlowMentor）\n2. 确认画像是否满意`,
-      summary: [
-        {
-          title: '待确认',
-          items: [
-            { label: 'Agent 名称', value: '[待填写]' },
-            { label: '画像确认', value: '待确认' },
-          ],
-        },
-      ],
     },
     event: 'fill-stage1',
   },
@@ -64,7 +55,7 @@ export const agentCreationScript: AgentCreationScriptStep[] = [
       type: 'text',
       text: `收到！为你生成 4 张候选形象...\n\n🎬 正在生成：\n- 解析形象需求\n- 生成角色设定\n- 渲染视觉效果\n\n生成完毕后你可以选择你更喜欢的图像作为数字员工的形象：\n○ 选择图 1 / 2 / 3 / 4\n○ 都不太满意，重新生成\n○ 在某张基础上微调：__________`,
     },
-    event: 'fill-stage2-prepare',
+    event: 'fill-stage2-config-and-generate',
   },
   {
     response: {
