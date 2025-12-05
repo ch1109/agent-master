@@ -16,6 +16,7 @@ import {
   Rocket,
   Upload,
   X,
+  Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgentCreationStore } from '@/stores/agentCreationStore'
@@ -177,12 +178,14 @@ function StageHeader({
                 <CheckCircle2 className={cn('h-5 w-5', pct === 100 ? 'text-[var(--color-success)]' : 'text-[#cbd5e1]')} />
               </div>
             )}
-            <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-[#ecf1fb]">
-              <div
-                className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
-                style={{ width: `${Math.min(pct, 100)}%` }}
-              />
-            </div>
+            {!isCompleteStep && (
+              <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-[#ecf1fb]">
+                <div
+                  className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
+                  style={{ width: `${Math.min(pct, 100)}%` }}
+                />
+              </div>
+            )}
           </button>
         )
       })}
@@ -218,6 +221,7 @@ export function AgentCreatePage() {
   } = useAgentCreationStore()
 
   const logoInputRef = useRef<HTMLInputElement | null>(null)
+  const styleReferenceInputRef = useRef<HTMLInputElement | null>(null)
   const animTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [highlightStage, setHighlightStage] = useState<StageKey | null>(null)
   const [highlightField, setHighlightField] = useState<{ stage: StageKey; key: string } | null>(null)
@@ -228,6 +232,8 @@ export function AgentCreatePage() {
   const [appearanceStep, setAppearanceStep] = useState<'config' | 'generate'>('config')
   const [actionsUnlocked, setActionsUnlocked] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [customVisualStyleInput, setCustomVisualStyleInput] = useState('')
+  const [customCharacterFormInput, setCustomCharacterFormInput] = useState('')
 
   const pulseHighlight = (stage: StageKey) => {
     setHighlightStage(stage)
@@ -415,6 +421,11 @@ export function AgentCreatePage() {
     pulseHighlight('stage4')
   }
 
+  const handleStageNavClick = (stage: StageKey) => {
+    if (showSuccess) setShowSuccess(false)
+    goStage(stage)
+  }
+
   const isFieldHighlight = (stage: StageKey, key: string) => highlightField?.stage === stage && highlightField.key === key
 
   const baseInput =
@@ -452,7 +463,70 @@ export function AgentCreatePage() {
     }
   }
 
+  const handleStyleReferenceFile = (file: File) => {
+    if (!file) return
+    const maxSize = 8 * 1024 * 1024
+    if (file.size > maxSize) {
+      window.alert('参考风格图建议控制在 8MB 内')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      updateStage2({ styleReferenceUrl: typeof reader.result === 'string' ? reader.result : '' })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleStyleReferenceChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleStyleReferenceFile(file)
+    }
+  }
+
+  const handleClearStyleReference = () => {
+    updateStage2({ styleReferenceUrl: '' })
+    if (styleReferenceInputRef.current) {
+      styleReferenceInputRef.current.value = ''
+    }
+  }
+
+  const addCustomTag = (type: 'visualStyle' | 'characterForm') => {
+    const raw = type === 'visualStyle' ? customVisualStyleInput : customCharacterFormInput
+    const value = raw.trim()
+    if (!value) return
+    if (type === 'visualStyle') {
+      const nextList = stage2.customVisualStyles.includes(value) ? stage2.customVisualStyles : [...stage2.customVisualStyles, value]
+      updateStage2({ customVisualStyles: nextList, visualStyle: value })
+      setCustomVisualStyleInput('')
+    } else {
+      const nextList = stage2.customCharacterForms.includes(value) ? stage2.customCharacterForms : [...stage2.customCharacterForms, value]
+      updateStage2({ customCharacterForms: nextList, characterForm: value })
+      setCustomCharacterFormInput('')
+    }
+  }
+
+  const removeCustomTag = (type: 'visualStyle' | 'characterForm', tag: string) => {
+    if (type === 'visualStyle') {
+      const nextList = stage2.customVisualStyles.filter(item => item !== tag)
+      const updates: Partial<typeof stage2> = { customVisualStyles: nextList }
+      if (stage2.visualStyle === tag) updates.visualStyle = ''
+      updateStage2(updates)
+    } else {
+      const nextList = stage2.customCharacterForms.filter(item => item !== tag)
+      const updates: Partial<typeof stage2> = { customCharacterForms: nextList }
+      if (stage2.characterForm === tag) updates.characterForm = ''
+      updateStage2(updates)
+    }
+  }
+
   const startImageGeneration = () => {
+    const defaults: Partial<typeof stage2> = {}
+    if (!stage2.visualStyle && visualStyleOptions.length > 0) defaults.visualStyle = visualStyleOptions[0].label
+    if (!stage2.characterForm && characterFormOptions.length > 0) defaults.characterForm = characterFormOptions[0].label
+    if (!stage2.bodyProportion && bodyProportionOptions.length > 0) defaults.bodyProportion = bodyProportionOptions[0].label
+    if (Object.keys(defaults).length > 0) updateStage2(defaults)
+
     setAppearanceStep('generate')
     setActionsUnlocked(false)
     updateStage2({ selectedImageId: null })
@@ -531,6 +605,16 @@ export function AgentCreatePage() {
               value={stage1.coreCapabilities}
               onChange={(e) => updateStage1({ coreCapabilities: e.target.value })}
             />
+          </div>
+          <div>
+            <p className="mb-1 text-sm font-medium text-[#0f172a]">其他需求/补充（可选）</p>
+            <textarea
+              className={textareaClass('stage1', 'otherRequirements')}
+              placeholder="还有哪些个性化要求？例如需要兼顾某个系统、额外的安全限制等"
+              value={stage1.otherRequirements}
+              onChange={(e) => updateStage1({ otherRequirements: e.target.value })}
+            />
+            <p className="mt-1 text-xs text-[#94a3b8]">此栏不计入进度，用于记录任何额外说明</p>
           </div>
         </div>
       </SectionCard>
@@ -669,62 +753,213 @@ export function AgentCreatePage() {
           </SectionCard>
 
           <SectionCard title="风格 / 形态 / 比例" description="快速选择视觉基调与角色形态" highlight={highlightStage === 'stage2'}>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-3">
+            <div className="grid gap-4 lg:grid-cols-4">
+              <div className="space-y-3 rounded-2xl border border-dashed border-[#dfe7fb] bg-[#f8faff] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
                 <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">🎨</span>
-                  视觉风格
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#eef2ff] to-[#e0ecff] text-xs">🖼️</span>
+                  参考风格图片（可选）
                 </p>
-                <div className="flex flex-col gap-2">
-                  {visualStyleOptions.map(opt => (
-                    <StyleOptionCard
-                      key={opt.id}
-                      icon={opt.icon}
-                      label={opt.label}
-                      description={opt.description}
-                      selected={stage2.visualStyle === opt.label}
-                      highlight={isFieldHighlight('stage2', 'visualStyle')}
-                      onClick={() => updateStage2({ visualStyle: opt.label })}
-                    />
-                  ))}
+                <div className="relative overflow-hidden rounded-xl border border-white bg-white/70 shadow-inner">
+                  {stage2.styleReferenceUrl ? (
+                    <img src={stage2.styleReferenceUrl} alt="参考风格" className="h-36 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-36 w-full flex-col items-center justify-center text-[#94a3b8]">
+                      <Upload className="mb-1 h-5 w-5 text-[var(--color-primary)]" />
+                      <p className="text-sm text-[#0f172a]">上传参考风格图</p>
+                      <p className="text-[11px] text-[#94a3b8]">非必填，辅助锁定视觉调性</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">🎭</span>
-                  角色形态
-                </p>
-                <div className="flex flex-col gap-2">
-                  {characterFormOptions.map(opt => (
-                    <StyleOptionCard
-                      key={opt.id}
-                      icon={opt.icon}
-                      label={opt.label}
-                      description={opt.description}
-                      selected={stage2.characterForm === opt.label}
-                      highlight={isFieldHighlight('stage2', 'characterForm')}
-                      onClick={() => updateStage2({ characterForm: opt.label })}
-                    />
-                  ))}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => styleReferenceInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] shadow-[0_10px_20px_rgba(37,99,235,0.08)] transition hover:-translate-y-[1px]"
+                  >
+                    <Upload className="h-4 w-4" /> 上传参考
+                  </button>
+                  {stage2.styleReferenceUrl && (
+                    <button
+                      type="button"
+                      onClick={handleClearStyleReference}
+                      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-[#94a3b8] transition hover:text-[#0f172a]"
+                    >
+                      <X className="h-4 w-4" /> 移除
+                    </button>
+                  )}
                 </div>
+                <p className="text-[11px] text-[#94a3b8]">支持 PNG/JPG/SVG，推荐 1:1 或 3:4，不计入必填</p>
+                <input
+                  ref={styleReferenceInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleStyleReferenceChange}
+                  className="hidden"
+                />
               </div>
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">📐</span>
-                  比例体型
-                </p>
-                <div className="flex flex-col gap-2">
-                  {bodyProportionOptions.map(opt => (
-                    <StyleOptionCard
-                      key={opt.id}
-                      icon={opt.icon}
-                      label={opt.label}
-                      description={opt.description}
-                      selected={stage2.bodyProportion === opt.label}
-                      highlight={isFieldHighlight('stage2', 'bodyProportion')}
-                      onClick={() => updateStage2({ bodyProportion: opt.label })}
-                    />
-                  ))}
+              <div className="lg:col-span-3 grid gap-4 md:grid-cols-3">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">🎨</span>
+                    视觉风格
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {visualStyleOptions.map(opt => (
+                      <StyleOptionCard
+                        key={opt.id}
+                        icon={opt.icon}
+                        label={opt.label}
+                        description={opt.description}
+                        selected={stage2.visualStyle === opt.label}
+                        highlight={isFieldHighlight('stage2', 'visualStyle')}
+                        onClick={() => updateStage2({ visualStyle: opt.label })}
+                      />
+                    ))}
+                  </div>
+                  <div className="space-y-2 rounded-xl border border-dashed border-[#e2e8f5] bg-white/60 p-3">
+                    <p className="text-xs font-medium text-[#0f172a]">自定义风格标签（选填）</p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        className={cn(baseInput, 'py-2 text-sm sm:w-auto sm:flex-1')}
+                        placeholder="填写你想要的独特风格，如 Vaporwave、莫奈油画..."
+                        value={customVisualStyleInput}
+                        onChange={(e) => setCustomVisualStyleInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            addCustomTag('visualStyle')
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addCustomTag('visualStyle')}
+                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3 py-2 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)] transition hover:brightness-105"
+                      >
+                        <Plus className="h-4 w-4" /> 添加
+                      </button>
+                    </div>
+                    {stage2.customVisualStyles.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {stage2.customVisualStyles.map(tag => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => updateStage2({ visualStyle: tag })}
+                            className={cn(
+                              'group inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm shadow-sm transition',
+                              stage2.visualStyle === tag
+                                ? 'border-[var(--color-primary)]/50 bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] text-[var(--color-primary)]'
+                                : 'border-[#e3eaf7] bg-white text-[#0f172a] hover:border-[var(--color-primary)]/40'
+                            )}
+                          >
+                            <span>{tag}</span>
+                            <span
+                              role="button"
+                              className="rounded-full bg-white/80 p-0.5 text-[#94a3b8] transition hover:text-[#0f172a]"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeCustomTag('visualStyle', tag)
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">🎭</span>
+                    角色形态
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {characterFormOptions.map(opt => (
+                      <StyleOptionCard
+                        key={opt.id}
+                        icon={opt.icon}
+                        label={opt.label}
+                        description={opt.description}
+                        selected={stage2.characterForm === opt.label}
+                        highlight={isFieldHighlight('stage2', 'characterForm')}
+                        onClick={() => updateStage2({ characterForm: opt.label })}
+                      />
+                    ))}
+                  </div>
+                  <div className="space-y-2 rounded-xl border border-dashed border-[#e2e8f5] bg-white/60 p-3">
+                    <p className="text-xs font-medium text-[#0f172a]">自定义角色形态（选填）</p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        className={cn(baseInput, 'py-2 text-sm sm:w-auto sm:flex-1')}
+                        placeholder="例如：蒸汽朋克机械猫、乐高积木人..."
+                        value={customCharacterFormInput}
+                        onChange={(e) => setCustomCharacterFormInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            addCustomTag('characterForm')
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addCustomTag('characterForm')}
+                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3 py-2 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)] transition hover:brightness-105"
+                      >
+                        <Plus className="h-4 w-4" /> 添加
+                      </button>
+                    </div>
+                    {stage2.customCharacterForms.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {stage2.customCharacterForms.map(tag => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => updateStage2({ characterForm: tag })}
+                            className={cn(
+                              'group inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm shadow-sm transition',
+                              stage2.characterForm === tag
+                                ? 'border-[var(--color-primary)]/50 bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] text-[var(--color-primary)]'
+                                : 'border-[#e3eaf7] bg-white text-[#0f172a] hover:border-[var(--color-primary)]/40'
+                            )}
+                          >
+                            <span>{tag}</span>
+                            <span
+                              role="button"
+                              className="rounded-full bg-white/80 p-0.5 text-[#94a3b8] transition hover:text-[#0f172a]"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeCustomTag('characterForm', tag)
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-[#0f172a] flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0f4ff] to-[#e8edff] text-xs">📐</span>
+                    比例体型
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {bodyProportionOptions.map(opt => (
+                      <StyleOptionCard
+                        key={opt.id}
+                        icon={opt.icon}
+                        label={opt.label}
+                        description={opt.description}
+                        selected={stage2.bodyProportion === opt.label}
+                        highlight={isFieldHighlight('stage2', 'bodyProportion')}
+                        onClick={() => updateStage2({ bodyProportion: opt.label })}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -760,6 +995,7 @@ export function AgentCreatePage() {
                       {stage2.visualStyle && <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-[#2563eb] shadow-sm">风格 · {stage2.visualStyle}</span>}
                       {stage2.characterForm && <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-[#7c3aed] shadow-sm">形态 · {stage2.characterForm}</span>}
                       {stage2.logoUrl && <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] text-[#0f172a] shadow-sm">Logo 已上传</span>}
+                      {stage2.styleReferenceUrl && <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] text-[#0f172a] shadow-sm">参考风格图</span>}
                     </div>
                     <div className="rounded-xl bg-white/70 px-3 py-2 text-xs text-[#475569] backdrop-blur">
                       <p className="font-semibold text-[#0f172a]">设定摘要</p>
@@ -969,6 +1205,16 @@ export function AgentCreatePage() {
                 />
               ))}
             </div>
+            <div className="rounded-2xl border border-dashed border-[#e3eaf7] bg-[#f8faff] p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+              <p className="text-sm font-semibold text-[#0f172a] mb-2">补充技能需求（选填）</p>
+              <textarea
+                className={textareaClass('stage3', 'customSkillRequirement')}
+                placeholder="如果缺少某个技能或工具，在这里简单描述，例如：需要熟悉我们内部审批 API，或支持解析专有格式的日志文件。"
+                value={stage3.customSkillRequirement}
+                onChange={(e) => updateStage3({ customSkillRequirement: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-[#94a3b8]">此处内容用于补充说明，不影响必填进度</p>
+            </div>
           </SectionCard>
         </div>
 
@@ -1129,6 +1375,11 @@ export function AgentCreatePage() {
                   {stage2.characterForm && <span className="rounded-full bg-white px-3 py-1 text-xs text-[#7c3aed]">形态 · {stage2.characterForm}</span>}
                   {stage2.bodyProportion && <span className="rounded-full bg-white px-3 py-1 text-xs text-[#059669]">比例 · {stage2.bodyProportion}</span>}
                 </div>
+                {stage2.styleReferenceUrl && (
+                  <div className="mt-3 rounded-lg border border-dashed border-[#e2e8f5] bg-white px-3 py-2 text-xs text-[#475569]">
+                    已附参考风格图，生成时会以此为调性参考。
+                  </div>
+                )}
               </div>
             </div>
           </SectionCard>
@@ -1159,6 +1410,12 @@ export function AgentCreatePage() {
                     <p className="text-sm text-[#475569]">{stage1.targetUsers || '暂无'}</p>
                   </div>
                 </div>
+                {stage1.otherRequirements && (
+                  <div>
+                    <p className="text-xs font-medium text-[#64748b] mb-1">其他需求</p>
+                    <p className="text-sm text-[#475569] leading-relaxed">{stage1.otherRequirements}</p>
+                  </div>
+                )}
                 {stage1.personality && (
                   <div className="flex gap-2">
                     <span className="rounded-full bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] px-3 py-1 text-xs text-[#2563eb]">性格 · {stage1.personality}</span>
@@ -1185,9 +1442,15 @@ export function AgentCreatePage() {
                           {tool.label}
                         </span>
                       ) : null
-                    })}
+                      })}
                   </div>
                 </div>
+                {stage3.customSkillRequirement && (
+                  <div>
+                    <p className="text-xs font-medium text-[#64748b] mb-1">补充技能需求</p>
+                    <p className="text-sm text-[#475569] leading-relaxed">{stage3.customSkillRequirement}</p>
+                  </div>
+                )}
                 {selectedPermission && (
                   <div>
                     <p className="text-xs font-medium text-[#64748b] mb-1">权限等级</p>
@@ -1283,12 +1546,12 @@ export function AgentCreatePage() {
               <h1 className="text-2xl font-semibold text-[#0f172a]">{showSuccess ? '创建完成' : '数字员工创建'}</h1>
               <p className="text-sm text-[#64748b]">{showSuccess ? '你的数字员工已成功创建并准备就绪' : '参考示例完成画像定义、形象生成、能力装配与记忆进化'}</p>
             </div>
-            {!showSuccess && (
-              <div className="flex items-center gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-medium text-[#2563eb] shadow-[0_10px_18px_rgba(37,99,235,0.18)]">
-                  <div className="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                  <span>整体完成度 {overallProgress}%</span>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-medium text-[#2563eb] shadow-[0_10px_18px_rgba(37,99,235,0.18)]">
+                <div className="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                <span>整体完成度 {overallProgress}%</span>
+              </div>
+              {!showSuccess && (
                 <button
                   type="button"
                   onClick={handleCompleteClick}
@@ -1296,21 +1559,19 @@ export function AgentCreatePage() {
                 >
                   完成创建 <CheckCircle2 className="h-4 w-4" />
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-[#e3eaf7] bg-white/98 px-4 py-5 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:px-6 lg:py-6 space-y-4">
-          {!showSuccess && (
-            <StageHeader
-              currentStage={currentStage}
-              progress={progress}
-              overallProgress={overallProgress}
-              onCompleteClick={handleCompleteClick}
-              onStageClick={goStage}
-            />
-          )}
+          <StageHeader
+            currentStage={currentStage}
+            progress={progress}
+            overallProgress={overallProgress}
+            onCompleteClick={handleCompleteClick}
+            onStageClick={handleStageNavClick}
+          />
 
           <div className="space-y-4">
             {!showSuccess && currentStage === 'stage1' && renderStage1()}

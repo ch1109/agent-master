@@ -136,6 +136,15 @@
           "问题诊断"
         ]
       }
+    },
+    "optionalFields": {
+      "otherRequirements": {
+        "label": "其他需求/补充",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "记录额外的业务限制、兼容性或特殊说明",
+        "note": "纯补充字段，不计入必填进度"
+      }
     }
   }
 }
@@ -281,7 +290,29 @@
         "name": "Stable Diffusion 3.5",
         "isDefault": false
       }
-    ]
+    ],
+    "optionalEnhancements": {
+      "referenceImage": {
+        "label": "参考风格图片",
+        "type": "image",
+        "required": false,
+        "description": "上传示例图帮助锁定视觉调性，不计入必填进度"
+      },
+      "customTags": {
+        "visualStyle": {
+          "label": "自定义视觉风格",
+          "type": "chips",
+          "required": false,
+          "description": "允许用户自由输入非预设的视觉风格标签"
+        },
+        "characterForm": {
+          "label": "自定义角色形态",
+          "type": "chips",
+          "required": false,
+          "description": "允许用户自由输入非预设的角色形态"
+        }
+      }
+    }
   }
 }
 ```
@@ -631,7 +662,15 @@
         },
         "useCases": ["自动化流程", "智能调度", "复杂任务"]
       }
-    ]
+    ],
+    "optionalFields": {
+      "customSkillRequirement": {
+        "label": "补充技能需求",
+        "type": "textarea",
+        "required": false,
+        "description": "用于描述缺少的技能/工具需求，纯补充不计入必填进度"
+      }
+    }
   }
 }
 ```

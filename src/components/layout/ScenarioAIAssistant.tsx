@@ -11,6 +11,7 @@ import { promptOptimizeScript } from '@/data/promptMockData'
 import { agentCreationScript } from '@/data/agentCreationScript'
 import { useAIStream } from '@/hooks/useAIStream'
 import { useAgentStore } from '@/stores/agentStore'
+import { useAgentCreationStore } from '@/stores/agentCreationStore'
 import { ChatMessage } from '@/services/anthropic'
 
 // 场景到详情页的路由映射
@@ -108,6 +109,16 @@ export function ScenarioAIAssistant() {
       }))
   }, [messages])
 
+  // 根据左侧进度，动态推断 Agent 创建脚本的起始步骤，避免从头开始播放
+  const resolveAgentCreateStartStep = useCallback(() => {
+    const { currentStage: agentStage, progress: agentProgress } = useAgentCreationStore.getState()
+    // 优先看当前阶段；如已到能力或记忆阶段，跳过前序问答
+    if (agentStage === 'stage4' || agentProgress.stage3 === 100 || agentProgress.stage4 > 0) return 10 // 记忆与进化
+    if (agentStage === 'stage3' || agentProgress.stage2 === 100) return 8 // 能力装配
+    if (agentStage === 'stage2' || agentProgress.stage1 === 100) return 5 // 形象生成
+    return 0 // 默认从画像定义开场
+  }, [])
+
   // 初始化消息
   useEffect(() => {
     const initialMessages: Record<string, MessageContent> = {
@@ -126,15 +137,22 @@ export function ScenarioAIAssistant() {
     }
 
     if (scenario === 'agent-create') {
-      // 进入页面即播放首轮招呼，引导用户先描述 Agent
-      const first = agentCreationScript[0]
-      setMessages([{
-        id: generateId(),
-        role: 'assistant',
-        content: first.response,
-        timestamp: new Date(),
-      }])
-      setCurrentStep(1) // 用户首次回复后进入第二轮
+      // 进入页面时，根据左侧填写进度选择合适的开场脚本，避免重复引导
+      const startStep = resolveAgentCreateStartStep()
+      if (startStep === 0) {
+        const first = agentCreationScript[startStep] || agentCreationScript[0]
+        setMessages([{
+          id: generateId(),
+          role: 'assistant',
+          content: first.response,
+          timestamp: new Date(),
+        }])
+        setCurrentStep(1) // 用户首次回复后进入第二轮
+      } else {
+        // 如果用户已手动前进到后续阶段，不提前播报，等待用户提问时从对应阶段回复
+        setMessages([])
+        setCurrentStep(startStep)
+      }
       return
     }
 
@@ -147,7 +165,7 @@ export function ScenarioAIAssistant() {
       }])
       setCurrentStep(0)
     }
-  }, [scenario])
+  }, [scenario, resolveAgentCreateStartStep])
 
   // 滚动到底部
   useEffect(() => {
@@ -197,7 +215,7 @@ export function ScenarioAIAssistant() {
   }, [buildHistory, streamMessage])
 
   // 播放单个脚本步骤并检查是否需要自动继续
-  const playScriptStep = useCallback(async (stepIndex: number): Promise<boolean> => {
+  const playScriptStep = useCallback(async (stepIndex: number, options?: { suppressEvent?: boolean }): Promise<boolean> => {
     type ScriptItem = { response: MessageContent; delay?: number; thinkingText?: string; navigateToDetail?: boolean; event?: string }
     const scripts: Record<string, ScriptItem[]> = {
       intent: intentConfigScript as ScriptItem[],
@@ -228,7 +246,7 @@ export function ScenarioAIAssistant() {
     }])
 
     // Agent 创建场景的自动填充事件
-    if (scenario === 'agent-create' && step.event) {
+    if (scenario === 'agent-create' && step.event && !options?.suppressEvent) {
       window.dispatchEvent(new CustomEvent('agent-creation-script', { detail: { event: step.event, step: stepIndex } }))
     }
 
@@ -299,9 +317,23 @@ export function ScenarioAIAssistant() {
 
     const currentScript = scenario ? scripts[scenario] : null
 
+    // 针对 Agent 创建：如果左侧已跳到后续阶段，脚本从对应阶段开始回复
+    let stepToPlay = currentStep
+    let suppressEvent = false
+    if (scenario === 'agent-create') {
+      const inferredStep = resolveAgentCreateStartStep()
+      if (currentStep < inferredStep) {
+        stepToPlay = inferredStep
+        suppressEvent = true // 避免重放前序自动填充事件覆盖用户手填
+      } else if (currentStep === inferredStep && inferredStep > 0) {
+        // 已经跳过前序步骤首次回复，也避免触发该步的自动填充
+        suppressEvent = true
+      }
+    }
+
     // 使用脚本响应
-    if (currentScript && currentStep < currentScript.length) {
-      await playScriptStep(currentStep)
+    if (currentScript && stepToPlay < currentScript.length) {
+      await playScriptStep(stepToPlay, { suppressEvent })
     } else {
       // 默认响应（当脚本用完时切换到真实 AI）
       if (useRealAI && !debugOptions.useMockResponse) {
@@ -318,7 +350,7 @@ export function ScenarioAIAssistant() {
         }])
       }
     }
-  }, [scenario, currentStep, useRealAI, debugOptions.useMockResponse, handleSendRealAI, playScriptStep])
+  }, [scenario, currentStep, useRealAI, debugOptions.useMockResponse, handleSendRealAI, playScriptStep, resolveAgentCreateStartStep])
 
   // 主发送处理函数
   const handleSend = useCallback(async (text: string, imageFile?: File) => {

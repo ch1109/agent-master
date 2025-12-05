@@ -13,6 +13,7 @@ export interface Stage1Profile {
   communicationStyle: string
   expertise: string[]
   specialSkills: string[]
+  otherRequirements: string
 }
 
 export interface Stage2Appearance {
@@ -21,6 +22,9 @@ export interface Stage2Appearance {
   characterForm: string
   bodyProportion: string
   logoUrl: string
+  styleReferenceUrl: string
+  customVisualStyles: string[]
+  customCharacterForms: string[]
   selectedImageId: string | null
   selectedActions: string[]
   imageModel: string
@@ -30,6 +34,7 @@ export interface Stage2Appearance {
 export interface Stage3Capability {
   selectedTools: string[]
   permissionLevel: string
+  customSkillRequirement: string
 }
 
 export interface Stage4Memory {
@@ -82,6 +87,7 @@ const initialStage1: Stage1Profile = {
   communicationStyle: '',
   expertise: [],
   specialSkills: [],
+  otherRequirements: '',
 }
 
 const initialStage2: Stage2Appearance = {
@@ -90,6 +96,9 @@ const initialStage2: Stage2Appearance = {
   characterForm: '',
   bodyProportion: '',
   logoUrl: '',
+  styleReferenceUrl: '',
+  customVisualStyles: [],
+  customCharacterForms: [],
   selectedImageId: null,
   selectedActions: [],
   imageModel: '即梦 4.0',
@@ -99,6 +108,7 @@ const initialStage2: Stage2Appearance = {
 const initialStage3: Stage3Capability = {
   selectedTools: [],
   permissionLevel: '',
+  customSkillRequirement: '',
 }
 
 const initialStage4: Stage4Memory = {
@@ -256,6 +266,7 @@ export const useAgentCreationStore = create<AgentCreationState>()(
         communicationStyle: '效率优先',
         expertise: ['自动化', '工作流', '效率工具'],
         specialSkills: ['流程设计', '节点调试', 'API对接'],
+        otherRequirements: state.stage1.otherRequirements,
       }
       return {
         stage1,
@@ -271,6 +282,9 @@ export const useAgentCreationStore = create<AgentCreationState>()(
         characterForm: '机械科技',
         bodyProportion: 'Q 版/二头身',
         logoUrl: state.stage2.logoUrl,
+        styleReferenceUrl: state.stage2.styleReferenceUrl,
+        customVisualStyles: state.stage2.customVisualStyles,
+        customCharacterForms: state.stage2.customCharacterForms,
         selectedImageId: state.stage2.selectedImageId || 'preset_4',
         selectedActions: full
           ? ['打字', '书写', '思考', '阅读', '站立', '悬浮', '睡眠', '跑跳', '飞行', '舞蹈', '挥手', '点头', '庆祝', '拥抱']
@@ -288,6 +302,7 @@ export const useAgentCreationStore = create<AgentCreationState>()(
       const stage3: Stage3Capability = {
         selectedTools: ['web_search', 'code_execution', 'document_generation', 'flow_chart', 'image_processing', 'file_processing', 'api_testing'],
         permissionLevel: permission,
+        customSkillRequirement: state.stage3.customSkillRequirement,
       }
       return {
         stage3,
