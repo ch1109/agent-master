@@ -19,3 +19,6 @@ export { BadcasePage } from './playground/BadcasePage'
 
 // 占位页面
 export { PlaceholderPage } from './placeholder/PlaceholderPage'
+
+// Agent 创建
+export { AgentCreatePage } from './agent/AgentCreatePage'

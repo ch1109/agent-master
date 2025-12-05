@@ -8,6 +8,7 @@ import { generateId, delay } from '@/lib/utils'
 import { intentConfigScript } from '@/data/intentMockData'
 import { uiConfigScript } from '@/data/uiConfigMockData'
 import { promptOptimizeScript } from '@/data/promptMockData'
+import { agentCreationScript } from '@/data/agentCreationScript'
 import { useAIStream } from '@/hooks/useAIStream'
 import { useAgentStore } from '@/stores/agentStore'
 import { ChatMessage } from '@/services/anthropic'
@@ -42,6 +43,7 @@ export function ScenarioAIAssistant() {
 
   // 根据路径判断场景
   const getScenario = useCallback(() => {
+    if (location.pathname.includes('/agent/create')) return 'agent-create' as const
     if (location.pathname.includes('/config/intent')) return 'intent' as const
     if (location.pathname.includes('/config/ui')) return 'ui' as const
     if (location.pathname.includes('/playground/prompt')) return 'prompt' as const
@@ -123,6 +125,19 @@ export function ScenarioAIAssistant() {
       },
     }
 
+    if (scenario === 'agent-create') {
+      // 进入页面即播放首轮招呼，引导用户先描述 Agent
+      const first = agentCreationScript[0]
+      setMessages([{
+        id: generateId(),
+        role: 'assistant',
+        content: first.response,
+        timestamp: new Date(),
+      }])
+      setCurrentStep(1) // 用户首次回复后进入第二轮
+      return
+    }
+
     if (scenario && initialMessages[scenario]) {
       setMessages([{
         id: generateId(),
@@ -183,11 +198,12 @@ export function ScenarioAIAssistant() {
 
   // 播放单个脚本步骤并检查是否需要自动继续
   const playScriptStep = useCallback(async (stepIndex: number): Promise<boolean> => {
-    type ScriptItem = { response: MessageContent; delay?: number; thinkingText?: string; navigateToDetail?: boolean }
+    type ScriptItem = { response: MessageContent; delay?: number; thinkingText?: string; navigateToDetail?: boolean; event?: string }
     const scripts: Record<string, ScriptItem[]> = {
       intent: intentConfigScript as ScriptItem[],
       ui: uiConfigScript as ScriptItem[],
       prompt: promptOptimizeScript as ScriptItem[],
+      'agent-create': agentCreationScript as ScriptItem[],
     }
 
     const currentScript = scenario ? scripts[scenario] : null
@@ -210,6 +226,11 @@ export function ScenarioAIAssistant() {
       content: step.response,
       timestamp: new Date(),
     }])
+
+    // Agent 创建场景的自动填充事件
+    if (scenario === 'agent-create' && step.event) {
+      window.dispatchEvent(new CustomEvent('agent-creation-script', { detail: { event: step.event, step: stepIndex } }))
+    }
 
     // 发送脚本响应事件（用于 prompt 场景的 Diff 同步更新）
     if (scenario === 'prompt' && step.response.type === 'text') {
@@ -236,8 +257,8 @@ export function ScenarioAIAssistant() {
     // 检查当前步骤是否有交互元素（选项或按钮）
     const hasInteraction = step.response.options?.length || step.response.actions?.length
 
-    // 如果没有交互元素，自动继续下一步
-    if (!hasInteraction && newStep < currentScript.length) {
+    // Agent 创建场景不做自动连播，需用户逐轮响应
+    if (scenario !== 'agent-create' && !hasInteraction && newStep < currentScript.length) {
       await delay(800) // 短暂停顿让用户看到消息
       return playScriptStep(newStep) // 递归播放下一步
     }
@@ -268,11 +289,12 @@ export function ScenarioAIAssistant() {
     }])
 
     // 根据场景选择脚本
-    type ScriptItem = { response: MessageContent; delay?: number; thinkingText?: string }
+    type ScriptItem = { response: MessageContent; delay?: number; thinkingText?: string; event?: string }
     const scripts: Record<string, ScriptItem[]> = {
       intent: intentConfigScript as ScriptItem[],
       ui: uiConfigScript as ScriptItem[],
       prompt: promptOptimizeScript as ScriptItem[],
+      'agent-create': agentCreationScript as ScriptItem[],
     }
 
     const currentScript = scenario ? scripts[scenario] : null
@@ -454,7 +476,8 @@ export function ScenarioAIAssistant() {
                 {isStreaming ? '思考中...' : (
                   scenario === 'intent' ? '意图配置' :
                   scenario === 'ui' ? 'UI 配置' :
-                  scenario === 'prompt' ? '提示词优化' : '在线'
+                  scenario === 'prompt' ? '提示词优化' :
+                  scenario === 'agent-create' ? 'Agent 创建' : '在线'
                 )}
                 {useRealAI && !debugOptions.useMockResponse && ' · AI'}
               </span>
@@ -512,6 +535,7 @@ export function ScenarioAIAssistant() {
           scenario === 'intent' ? '描述你想创建的意图...' :
           scenario === 'ui' ? '描述页面或上传截图...' :
           scenario === 'prompt' ? '描述要优化的问题...' :
+          scenario === 'agent-create' ? '描述你想要的数字员工...' :
           '输入你的需求...'
         }
         showImageUpload={scenario === 'ui'}

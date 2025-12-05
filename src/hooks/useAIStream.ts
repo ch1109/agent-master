@@ -7,7 +7,7 @@ import { streamMessage, ChatMessage, buildSystemPrompt } from '@/services/anthro
 
 export interface UseAIStreamOptions {
   /** 场景类型 */
-  scenario?: 'intent' | 'ui' | 'prompt' | null
+  scenario?: 'intent' | 'ui' | 'prompt' | 'agent-create' | null
   /** 额外的系统上下文 */
   additionalContext?: string
   /** 流式开始时的回调 */
@@ -165,4 +165,3 @@ export function useAIStream(options: UseAIStreamOptions = {}): UseAIStreamReturn
 }
 
 export default useAIStream
-

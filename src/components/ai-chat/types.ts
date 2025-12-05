@@ -81,8 +81,7 @@ export interface Message {
 
 // 聊天上下文
 export interface ChatContext {
-  scenario: 'intent' | 'ui' | 'prompt' | null
+  scenario: 'intent' | 'ui' | 'prompt' | 'agent-create' | null
   step: number
   data: Record<string, unknown>
 }
-

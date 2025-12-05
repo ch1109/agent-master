@@ -3,7 +3,7 @@ import { Message, MessageContent, ChatContext } from '@/components/ai-chat/types
 import { generateId, delay } from '@/lib/utils'
 
 interface UseAIChatOptions {
-  scenario?: 'intent' | 'ui' | 'prompt'
+  scenario?: 'intent' | 'ui' | 'prompt' | 'agent-create'
   onMessage?: (message: Message) => void
   onStepChange?: (step: number) => void
 }
@@ -181,4 +181,3 @@ export function useAIChat(options: UseAIChatOptions = {}) {
 }
 
 export default useAIChat
-

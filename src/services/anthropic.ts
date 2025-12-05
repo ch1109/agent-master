@@ -137,7 +137,7 @@ export async function streamMessage(
  * 构建系统提示词
  */
 export function buildSystemPrompt(context: {
-  scenario?: 'intent' | 'ui' | 'prompt' | null
+  scenario?: 'intent' | 'ui' | 'prompt' | 'agent-create' | null
   additionalContext?: string
 }): string {
   const basePrompt = `你是 Agent Master 的 AI 助手，一个专门帮助用户配置和管理 AI Agent 的智能助手。
@@ -166,6 +166,8 @@ export function buildSystemPrompt(context: {
 - 提示词的清晰度和完整性
 - 是否有歧义或遗漏
 - 如何让 AI 更好地理解和执行任务`,
+    'agent-create': `\n\n当前场景：数字员工创建
+你正在通过对话帮助用户完成 Agent 的画像定义、形象生成、能力装配、记忆与进化配置。请保持苏格拉底式提问，引导填写关键字段，确保输出简洁、可执行。`,
   }
 
   let finalPrompt = basePrompt
@@ -181,4 +183,3 @@ export function buildSystemPrompt(context: {
 
 // 导出类型
 export type { Anthropic }
-

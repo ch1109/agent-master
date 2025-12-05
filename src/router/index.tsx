@@ -12,7 +12,8 @@ import {
   PromptDetailPage,
   TestCasePage,
   BadcasePage,
-  PlaceholderPage
+  PlaceholderPage,
+  AgentCreatePage
 } from '@/pages'
 
 // 包装页面组件，添加布局
@@ -120,7 +121,7 @@ export const router = createBrowserRouter([
   // Agent 管理
   {
     path: '/agent/create',
-    element: <PageWrapper><PlaceholderPage title="Agent 创建与配置" description="创建并配置 Agent 能力" /></PageWrapper>,
+    element: <PageWrapper><AgentCreatePage /></PageWrapper>,
   },
   {
     path: '/agent/deploy',
