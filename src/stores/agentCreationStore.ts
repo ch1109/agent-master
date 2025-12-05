@@ -20,6 +20,7 @@ export interface Stage2Appearance {
   visualStyle: string
   characterForm: string
   bodyProportion: string
+  logoUrl: string
   selectedImageId: string | null
   selectedActions: string[]
   imageModel: string
@@ -88,6 +89,7 @@ const initialStage2: Stage2Appearance = {
   visualStyle: '',
   characterForm: '',
   bodyProportion: '',
+  logoUrl: '',
   selectedImageId: null,
   selectedActions: [],
   imageModel: '即梦 4.0',
@@ -268,6 +270,7 @@ export const useAgentCreationStore = create<AgentCreationState>()(
         visualStyle: '3D 渲染',
         characterForm: '机械科技',
         bodyProportion: 'Q 版/二头身',
+        logoUrl: state.stage2.logoUrl,
         selectedImageId: state.stage2.selectedImageId || 'preset_4',
         selectedActions: full
           ? ['打字', '书写', '思考', '阅读', '站立', '悬浮', '睡眠', '跑跳', '飞行', '舞蹈', '挥手', '点头', '庆祝', '拥抱']

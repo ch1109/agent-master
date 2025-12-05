@@ -513,12 +513,14 @@ export function ScenarioAIAssistant() {
 
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
+        {messages.map((message, index) => (
           <MessageBubble
             key={message.id}
             message={message}
             onOptionSelect={handleOptionSelect}
             onActionClick={handleActionClick}
+            // 首条机器人欢迎语直接展示，不走流式打字效果
+            enableStreaming={!(index === 0 && message.role === 'assistant')}
           />
         ))}
         

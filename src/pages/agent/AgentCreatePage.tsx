@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +14,8 @@ import {
   Image,
   Cpu,
   Rocket,
+  Upload,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgentCreationStore } from '@/stores/agentCreationStore'
@@ -189,6 +191,7 @@ export function AgentCreatePage() {
     applyPresetStage4,
   } = useAgentCreationStore()
 
+  const logoInputRef = useRef<HTMLInputElement | null>(null)
   const animTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [highlightStage, setHighlightStage] = useState<StageKey | null>(null)
   const [highlightField, setHighlightField] = useState<{ stage: StageKey; key: string } | null>(null)
@@ -198,6 +201,7 @@ export function AgentCreatePage() {
   const genCompleteTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [appearanceStep, setAppearanceStep] = useState<'config' | 'generate'>('config')
   const [actionsUnlocked, setActionsUnlocked] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const pulseHighlight = (stage: StageKey) => {
     setHighlightStage(stage)
@@ -352,6 +356,8 @@ export function AgentCreatePage() {
             ]
             steps.forEach((fn, idx) => schedule(fn, idx * DELAY_STAGE4))
             schedule(() => pulseHighlight('stage4'), steps.length * DELAY_STAGE4 + DELAY_PULSE)
+            // 填充完成后2秒自动跳转到创建成功页面
+            schedule(() => setShowSuccess(true), steps.length * DELAY_STAGE4 + DELAY_PULSE + 2000)
           }
           break;
         default:
@@ -382,6 +388,34 @@ export function AgentCreatePage() {
     cn(baseInput, isFieldHighlight(stage, key) && 'ring-2 ring-[var(--color-primary)]/50 border-[var(--color-primary)]/50')
   const textareaClass = (stage: StageKey, key: string) =>
     cn(baseInput, 'min-h-[108px] resize-none leading-relaxed align-top', isFieldHighlight(stage, key) && 'ring-2 ring-[var(--color-primary)]/50 border-[var(--color-primary)]/50')
+
+  const handleLogoFile = (file: File) => {
+    if (!file) return
+    const maxSize = 4 * 1024 * 1024
+    if (file.size > maxSize) {
+      window.alert('Logo 图片建议控制在 4MB 内')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      updateStage2({ logoUrl: typeof reader.result === 'string' ? reader.result : '' })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleLogoInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleLogoFile(file)
+    }
+  }
+
+  const handleClearLogo = () => {
+    updateStage2({ logoUrl: '' })
+    if (logoInputRef.current) {
+      logoInputRef.current.value = ''
+    }
+  }
 
   const startImageGeneration = () => {
     setAppearanceStep('generate')
@@ -544,13 +578,56 @@ export function AgentCreatePage() {
             }
             highlight={highlightStage === 'stage2'}
           >
-            <div className="grid gap-3 lg:grid-cols-3">
-              <div className="lg:col-span-3 space-y-3">
+            <div className="grid gap-3 lg:grid-cols-[2fr,1fr]">
+              <div className="space-y-3">
                 <textarea
                   className={textareaClass('stage2', 'characterSettings')}
                   placeholder="名字叫「团子」，一只Q版体型的布偶猫。全身毛发像棉花糖一样蓬松洁白，拥有巨大的深海蓝色眼睛，眼神总是充满了无辜和关切。脖子上系着一个巨大的黄色铃铛，背着一个迷你的红色邮差包。它总是保持着歪头倾听的姿势，偶尔会伸出毛茸茸的爪子做抚摸状。"
                   value={stage2.characterSettings}
                   onChange={(e) => updateStage2({ characterSettings: e.target.value })}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-dashed border-[#dfe7fb] bg-[#f8faff] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-inner">
+                    {stage2.logoUrl ? (
+                      <img src={stage2.logoUrl} alt="Logo 预览" className="h-12 w-12 rounded-lg object-contain" />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#eef2ff] to-[#e0ecff] text-[var(--color-primary)]">
+                        <Upload className="h-5 w-5" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-[#0f172a]">品牌 Logo（可选）</p>
+                    <p className="text-xs text-[#64748b]">支持 PNG/SVG，建议 1:1，背景透明更佳</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] shadow-[0_10px_20px_rgba(37,99,235,0.08)] transition hover:-translate-y-[1px]"
+                    >
+                      <Upload className="h-4 w-4" /> 上传
+                    </button>
+                    {stage2.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={handleClearLogo}
+                        className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-[#94a3b8] transition hover:text-[#0f172a]"
+                      >
+                        <X className="h-4 w-4" /> 移除
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoInputChange}
+                  className="hidden"
                 />
               </div>
             </div>
@@ -647,6 +724,7 @@ export function AgentCreatePage() {
                       <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-[#0f172a] shadow-sm">当前选中</span>
                       {stage2.visualStyle && <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-[#2563eb] shadow-sm">风格 · {stage2.visualStyle}</span>}
                       {stage2.characterForm && <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-[#7c3aed] shadow-sm">形态 · {stage2.characterForm}</span>}
+                      {stage2.logoUrl && <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] text-[#0f172a] shadow-sm">Logo 已上传</span>}
                     </div>
                     <div className="rounded-xl bg-white/70 px-3 py-2 text-xs text-[#475569] backdrop-blur">
                       <p className="font-semibold text-[#0f172a]">设定摘要</p>
@@ -707,6 +785,7 @@ export function AgentCreatePage() {
                   <div>
                     <p className="mb-1 text-sm font-medium text-[#0f172a]">生图模型</p>
                     <select
+                      title="选择生图模型"
                       className={cn(baseInput, 'cursor-pointer')}
                       value={stage2.imageModel}
                       onChange={(e) => updateStage2({ imageModel: e.target.value })}
@@ -719,6 +798,7 @@ export function AgentCreatePage() {
                   <div>
                     <p className="mb-1 text-sm font-medium text-[#0f172a]">图生视频</p>
                     <select
+                      title="选择图生视频模型"
                       className={cn(baseInput, 'cursor-pointer')}
                       value={stage2.videoModel}
                       onChange={(e) => updateStage2({ videoModel: e.target.value })}
@@ -971,6 +1051,193 @@ export function AgentCreatePage() {
     </div>
   )
 
+  const renderSuccess = () => {
+    const selectedImage = placeholderImages.find(img => img.id === stage2.selectedImageId) || placeholderImages[0]
+    const selectedPermission = permissionOptions.find(p => p.id === stage3.permissionLevel)
+    const selectedMemory = memoryOptions.find(m => m.id === stage4.memoryDuration)
+    const selectedOptimization = optimizationOptions.find(o => o.id === stage4.selfOptimization)
+    const selectedScenarios = scenarioOptions.filter(s => stage4.applicationScenarios.includes(s.id))
+
+    return (
+      <div className="space-y-6">
+        {/* 成功标题 */}
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#10b981] to-[#059669] shadow-[0_20px_50px_rgba(16,185,129,0.3)]">
+            <CheckCircle2 className="h-10 w-10 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-[#0f172a]">创建成功！</h2>
+          <p className="mt-2 text-sm text-[#64748b]">你的数字员工已准备就绪</p>
+        </div>
+
+        {/* 主要展示区域 */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* 左侧：形象展示 */}
+          <SectionCard
+            title={`${stage1.agentName || 'Agent'} 的形象`}
+            description="你选择的专属形象"
+            icon={<ImageIcon className="h-5 w-5" />}
+          >
+            <div className="space-y-4">
+              <div className={cn('relative h-64 w-full overflow-hidden rounded-2xl bg-gradient-to-br shadow-xl', selectedImage.gradient)}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <p className="text-lg font-semibold">{selectedImage.name}</p>
+                    <p className="mt-1 text-sm opacity-90">{selectedImage.description}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-[#f8faff] p-4">
+                <p className="text-sm font-semibold text-[#0f172a] mb-2">形象描述</p>
+                <p className="text-sm text-[#64748b] leading-relaxed">{stage2.characterSettings || '暂无描述'}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {stage2.visualStyle && <span className="rounded-full bg-white px-3 py-1 text-xs text-[#2563eb]">风格 · {stage2.visualStyle}</span>}
+                  {stage2.characterForm && <span className="rounded-full bg-white px-3 py-1 text-xs text-[#7c3aed]">形态 · {stage2.characterForm}</span>}
+                  {stage2.bodyProportion && <span className="rounded-full bg-white px-3 py-1 text-xs text-[#059669]">比例 · {stage2.bodyProportion}</span>}
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* 右侧：画像与配置 */}
+          <div className="space-y-4">
+            <SectionCard
+              title="Agent 画像"
+              description="核心定位与能力"
+              icon={<UserRound className="h-5 w-5" />}
+            >
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-[#64748b] mb-1">名称</p>
+                  <p className="text-base font-semibold text-[#0f172a]">{stage1.agentName || '未命名'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-[#64748b] mb-1">主要职责</p>
+                  <p className="text-sm text-[#475569] leading-relaxed">{stage1.mainDuty || '暂无'}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-[#64748b] mb-1">服务场景</p>
+                    <p className="text-sm text-[#475569]">{stage1.serviceScene || '暂无'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#64748b] mb-1">目标用户</p>
+                    <p className="text-sm text-[#475569]">{stage1.targetUsers || '暂无'}</p>
+                  </div>
+                </div>
+                {stage1.personality && (
+                  <div className="flex gap-2">
+                    <span className="rounded-full bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] px-3 py-1 text-xs text-[#2563eb]">性格 · {stage1.personality}</span>
+                    {stage1.communicationStyle && <span className="rounded-full bg-gradient-to-r from-[#fef3f2] to-[#fee2e2] px-3 py-1 text-xs text-[#dc2626]">风格 · {stage1.communicationStyle}</span>}
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="配置明细"
+              description="能力、权限与记忆设置"
+              icon={<Brain className="h-5 w-5" />}
+            >
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-xs font-medium text-[#64748b] mb-1.5">已装备能力 ({stage3.selectedTools.length})</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {stage3.selectedTools.map(toolId => {
+                      const tool = toolOptions.find(t => t.id === toolId)
+                      return tool ? (
+                        <span key={toolId} className="inline-flex items-center gap-1 rounded-full bg-white border border-[#e3eaf7] px-2.5 py-1 text-xs text-[#475569]">
+                          <span>{tool.icon}</span>
+                          {tool.label}
+                        </span>
+                      ) : null
+                    })}
+                  </div>
+                </div>
+                {selectedPermission && (
+                  <div>
+                    <p className="text-xs font-medium text-[#64748b] mb-1">权限等级</p>
+                    <p className="text-sm text-[#0f172a]">{selectedPermission.icon} {selectedPermission.label}</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  {selectedMemory && (
+                    <div>
+                      <p className="text-xs font-medium text-[#64748b] mb-1">记忆时长</p>
+                      <p className="text-sm text-[#475569]">{selectedMemory.label}</p>
+                    </div>
+                  )}
+                  {selectedOptimization && (
+                    <div>
+                      <p className="text-xs font-medium text-[#64748b] mb-1">自优化</p>
+                      <p className="text-sm text-[#475569]">{selectedOptimization.label}</p>
+                    </div>
+                  )}
+                </div>
+                {selectedScenarios.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-[#64748b] mb-1.5">应用场景</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedScenarios.map(s => (
+                        <span key={s.id} className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#f4f7ff] to-[#e8edff] px-2.5 py-1 text-xs text-[#2563eb]">
+                          {s.icon} {s.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+          </div>
+        </div>
+
+        {/* 操作按钮区 */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-6 py-4 text-base font-semibold text-white shadow-[0_20px_40px_rgba(37,99,235,0.3)] transition hover:brightness-110"
+          >
+            <Sparkles className="h-5 w-5" />
+            开始聊天
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-2xl border-2 border-[#2563eb] bg-white px-6 py-4 text-base font-semibold text-[#2563eb] shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition hover:bg-[#f8faff]"
+          >
+            <Wand2 className="h-5 w-5" />
+            优化 Agent
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const config = {
+                metadata: {
+                  agentName: stage1.agentName,
+                  createdAt: new Date().toISOString(),
+                  version: '1.0.0'
+                },
+                profile: stage1,
+                appearance: stage2,
+                capabilities: stage3,
+                memory: stage4
+              }
+              const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `${stage1.agentName || 'agent'}-config.json`
+              a.click()
+              URL.revokeObjectURL(url)
+            }}
+            className="flex items-center justify-center gap-2 rounded-2xl border-2 border-[#e3eaf7] bg-white px-6 py-4 text-base font-semibold text-[#64748b] shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition hover:border-[#cbd5e1] hover:text-[#475569]"
+          >
+            <Rocket className="h-5 w-5" />
+            导出配置
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative h-full overflow-auto bg-gradient-to-b from-[#f8fafc] via-[#f8fbff] to-[#eef2ff]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -983,52 +1250,80 @@ export function AgentCreatePage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6b7b9d]">Agent Master · 创建向导</p>
-              <h1 className="text-2xl font-semibold text-[#0f172a]">数字员工创建</h1>
-              <p className="text-sm text-[#64748b]">参考示例完成画像定义、形象生成、能力装配与记忆进化</p>
+              <h1 className="text-2xl font-semibold text-[#0f172a]">{showSuccess ? '创建完成' : '数字员工创建'}</h1>
+              <p className="text-sm text-[#64748b]">{showSuccess ? '你的数字员工已成功创建并准备就绪' : '参考示例完成画像定义、形象生成、能力装配与记忆进化'}</p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm text-[#2563eb] shadow-[0_12px_28px_rgba(37,99,235,0.2)]">
-              <div className="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-              <span>整体完成度 {overallProgress}%</span>
-            </div>
+            {!showSuccess && (
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm text-[#2563eb] shadow-[0_12px_28px_rgba(37,99,235,0.2)]">
+                <div className="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                <span>整体完成度 {overallProgress}%</span>
+              </div>
+            )}
           </div>
         </div>
 
-        <StageHeader currentStage={currentStage} progress={progress} onStageClick={goStage} />
+        {!showSuccess && <StageHeader currentStage={currentStage} progress={progress} onStageClick={goStage} />}
 
         <div className="space-y-4">
-          {currentStage === 'stage1' && renderStage1()}
-          {currentStage === 'stage2' && renderStage2()}
-          {currentStage === 'stage3' && renderStage3()}
-          {currentStage === 'stage4' && renderStage4()}
+          {!showSuccess && currentStage === 'stage1' && renderStage1()}
+          {!showSuccess && currentStage === 'stage2' && renderStage2()}
+          {!showSuccess && currentStage === 'stage3' && renderStage3()}
+          {!showSuccess && currentStage === 'stage4' && renderStage4()}
+          {showSuccess && renderSuccess()}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-[#e4eaf5] pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={prevStage}
-            disabled={currentStage === 'stage1'}
-            className={cn(
-              'inline-flex items-center gap-1 text-sm text-[#64748b] transition hover:text-[var(--color-primary)]',
-              currentStage === 'stage1' && 'cursor-not-allowed text-[#c0c8da]'
-            )}
-          >
-            <ChevronLeft className="h-4 w-4" /> 上一步
-          </button>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-[#64748b]">已完成 {overallProgress}%</span>
+        {!showSuccess && (
+          <div className="flex flex-col gap-3 border-t border-[#e4eaf5] pt-4 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
-              onClick={nextStage}
-              disabled={currentStage === 'stage4'}
+              onClick={prevStage}
+              disabled={currentStage === 'stage1'}
               className={cn(
-                'inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(37,99,235,0.28)] transition hover:brightness-105',
-                currentStage === 'stage4' && 'cursor-not-allowed opacity-60 hover:brightness-100'
+                'inline-flex items-center gap-1 text-sm text-[#64748b] transition hover:text-[var(--color-primary)]',
+                currentStage === 'stage1' && 'cursor-not-allowed text-[#c0c8da]'
               )}
             >
-              下一步 <ChevronRight className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" /> 上一步
+            </button>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-[#64748b]">已完成 {overallProgress}%</span>
+              {currentStage === 'stage4' && overallProgress === 100 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSuccess(true)}
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(16,185,129,0.28)] transition hover:brightness-105"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  完成创建
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={nextStage}
+                  disabled={currentStage === 'stage4'}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(37,99,235,0.28)] transition hover:brightness-105',
+                    currentStage === 'stage4' && 'cursor-not-allowed opacity-60 hover:brightness-100'
+                  )}
+                >
+                  下一步 <ChevronRight className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showSuccess && (
+          <div className="flex justify-center border-t border-[#e4eaf5] pt-4">
+            <button
+              type="button"
+              onClick={() => setShowSuccess(false)}
+              className="inline-flex items-center gap-1 text-sm text-[#64748b] transition hover:text-[var(--color-primary)]"
+            >
+              <ChevronLeft className="h-4 w-4" /> 返回编辑
             </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
