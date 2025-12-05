@@ -987,61 +987,52 @@ export function AgentCreatePage() {
               highlight={highlightStage === 'stage2'}
             >
               <div className="space-y-3">
-                <div className="relative overflow-hidden rounded-2xl border border-white/50 bg-white/50 shadow-[0_12px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-                  <div className={cn('h-60 w-full bg-gradient-to-br', selectedPreview.gradient)} />
-                  <div className="absolute inset-0 flex flex-col justify-between p-4">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-[#0f172a] shadow-sm">当前选中</span>
-                      {stage2.visualStyle && <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-[#2563eb] shadow-sm">风格 · {stage2.visualStyle}</span>}
-                      {stage2.characterForm && <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-[#7c3aed] shadow-sm">形态 · {stage2.characterForm}</span>}
-                      {stage2.logoUrl && <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] text-[#0f172a] shadow-sm">Logo 已上传</span>}
-                      {stage2.styleReferenceUrl && <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] text-[#0f172a] shadow-sm">参考风格图</span>}
-                    </div>
-                    <div className="rounded-xl bg-white/70 px-3 py-2 text-xs text-[#475569] backdrop-blur">
-                      <p className="font-semibold text-[#0f172a]">设定摘要</p>
-                      <p className="line-clamp-2">{stage2.characterSettings || '描述形象特征、服饰与姿态，示例：圆润萌系机器人，暖橙与科技蓝光晕。'}</p>
+                <div className="relative overflow-hidden rounded-2xl border border-white/50 bg-white/70 p-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+                  <div className="flex items-center justify-center rounded-xl bg-gradient-to-br from-[#f8fbff] via-[#eef2ff] to-[#e0e7ff] p-3">
+                    <div className="aspect-square w-full max-w-[540px] min-h-[260px] md:min-h-[320px] overflow-hidden rounded-2xl bg-white shadow-inner">
+                      {isGenerating ? (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[#e5edff] via-[#eef2ff] to-[#f5f8ff] text-[#475569]">
+                          <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
+                          <p className="text-sm font-medium text-[#0f172a]">图像生成中 · 约 8 秒</p>
+                          <p className="text-xs text-[#64748b]">请稍候，我们正在渲染你的形象</p>
+                        </div>
+                      ) : (
+                        <img
+                          src={selectedPreview.image}
+                          alt={`${selectedPreview.name} 预览`}
+                          className="h-full w-full object-contain"
+                        />
+                      )}
                     </div>
                   </div>
-                  {isGenerating && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
-                        <p className="text-sm text-[#0f172a]">图像生成中 · 约 8 秒</p>
-                        <p className="text-xs text-[#64748b]">请稍候，我们正在渲染你的形象</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {!isGenerating ? (
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    {placeholderImages.map((img) => (
-                      <button
-                        key={img.id}
-                        type="button"
-                        onClick={() => handleSelectImage(img.id)}
-                        className={cn(
-                          'group relative overflow-hidden rounded-xl border border-[#e3eaf7] bg-white/80 p-2 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px] backdrop-blur',
-                          stage2.selectedImageId === img.id && 'border-[var(--color-primary)]/60 ring-2 ring-[var(--color-primary)]/30'
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {placeholderImages.map((img) => (
+                    <button
+                      key={img.id}
+                      type="button"
+                      onClick={() => handleSelectImage(img.id)}
+                      disabled={isGenerating}
+                      className={cn(
+                        'group relative overflow-hidden rounded-xl border border-[#e3eaf7] bg-white/80 p-2 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px] backdrop-blur',
+                        stage2.selectedImageId === img.id && 'border-[var(--color-primary)]/60 ring-2 ring-[var(--color-primary)]/30',
+                        isGenerating && 'cursor-not-allowed opacity-80'
+                      )}
+                    >
+                      <div className="relative h-20 w-full overflow-hidden rounded-lg">
+                        {isGenerating ? (
+                          <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[#e5edff] via-[#eef2ff] to-[#f5f8ff] text-xs text-[#475569]">
+                            生成中...
+                          </div>
+                        ) : (
+                          <img src={img.thumbnail || img.image} alt={img.name} className="h-full w-full object-cover" />
                         )}
-                      >
-                        <div className={cn('h-20 w-full rounded-lg bg-gradient-to-br', img.gradient)} />
-                        <p className="mt-1 text-xs font-semibold text-[#0f172a]">{img.name}</p>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    {placeholderImages.map((img) => (
-                      <div
-                        key={img.id}
-                        className="rounded-xl border border-dashed border-[#dfe7fb] bg-[#f8faff] p-3 text-center text-xs text-[#94a3b8]"
-                      >
-                        渐变占位图
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <p className="mt-1 text-xs font-semibold text-[#0f172a]">{img.name}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </SectionCard>
 
@@ -1359,9 +1350,11 @@ export function AgentCreatePage() {
             icon={<ImageIcon className="h-5 w-5" />}
           >
             <div className="space-y-4">
-              <div className={cn('relative h-64 w-full overflow-hidden rounded-2xl bg-gradient-to-br shadow-xl', selectedImage.gradient)}>
+              <div className="relative h-64 w-full overflow-hidden rounded-2xl shadow-xl">
+                <img src={selectedImage.image} alt={selectedImage.name} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/40" aria-hidden />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center text-white">
+                  <div className="text-center text-white drop-shadow">
                     <p className="text-lg font-semibold">{selectedImage.name}</p>
                     <p className="mt-1 text-sm opacity-90">{selectedImage.description}</p>
                   </div>

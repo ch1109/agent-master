@@ -485,31 +485,31 @@
     "images": [
       {
         "id": "preset_1",
-        "name": "图1 - 科技蓝版",
-        "url": "/assets/agent-images/preset-1.png",
-        "thumbnail": "/assets/agent-images/preset-1-thumb.png",
-        "description": "科技蓝配色，屏幕头部，双天线"
+        "name": "图 1",
+        "url": "/agent-images/preset-1.jpeg",
+        "thumbnail": "/agent-images/preset-1.jpeg",
+        "description": "用户上传的形象照片 1"
       },
       {
         "id": "preset_2",
-        "name": "图2 - 暖橙版",
-        "url": "/assets/agent-images/preset-2.png",
-        "thumbnail": "/assets/agent-images/preset-2-thumb.png",
-        "description": "暖橙色系，圆润造型，发光效果"
+        "name": "图 2",
+        "url": "/agent-images/preset-2.jpeg",
+        "thumbnail": "/agent-images/preset-2.jpeg",
+        "description": "用户上传的形象照片 2"
       },
       {
         "id": "preset_3",
-        "name": "图3 - 渐变版",
-        "url": "/assets/agent-images/preset-3.png",
-        "thumbnail": "/assets/agent-images/preset-3-thumb.png",
-        "description": "橙蓝渐变，品牌标识位明显"
+        "name": "图 3",
+        "url": "/agent-images/preset-3.jpeg",
+        "thumbnail": "/agent-images/preset-3.jpeg",
+        "description": "用户上传的形象照片 3"
       },
       {
         "id": "preset_4",
-        "name": "图4 - 极简版",
-        "url": "/assets/agent-images/preset-4.png",
-        "thumbnail": "/assets/agent-images/preset-4-thumb.png",
-        "description": "极简设计，Q版萌系，完美融合"
+        "name": "图 4",
+        "url": "/agent-images/preset-4.jpeg",
+        "thumbnail": "/agent-images/preset-4.jpeg",
+        "description": "用户上传的形象照片 4"
       }
     ],
     "generationAnimation": {
@@ -2142,12 +2142,12 @@ src/
 ├── utils/
 │   ├── exportConfig.ts          # 导出配置工具
 │   └── sessionStorage.ts        # 会话存储工具
-├── assets/
+├── public/
 │   └── agent-images/            # 预制Agent图片
-│       ├── preset-1.png
-│       ├── preset-2.png
-│       ├── preset-3.png
-│       └── preset-4.png
+│       ├── preset-1.jpeg
+│       ├── preset-2.jpeg
+│       ├── preset-3.jpeg
+│       └── preset-4.jpeg
 ├── App.tsx
 └── main.tsx
 ```

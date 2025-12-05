@@ -158,27 +158,31 @@ export const scenarioOptions: OptionItem[] = [
 export const placeholderImages = [
   {
     id: 'preset_1',
-    name: '图1 - 科技蓝版',
-    gradient: 'from-blue-500 via-cyan-400 to-sky-300',
-    description: '科技蓝配色，屏幕头部，双天线',
+    name: '图 1',
+    image: '/agent-images/preset-1.jpeg',
+    thumbnail: '/agent-images/preset-1.jpeg',
+    description: '用户上传的形象照片 1',
   },
   {
     id: 'preset_2',
-    name: '图2 - 暖橙版',
-    gradient: 'from-orange-500 via-amber-400 to-yellow-300',
-    description: '暖橙色系，圆润造型，发光效果',
+    name: '图 2',
+    image: '/agent-images/preset-2.jpeg',
+    thumbnail: '/agent-images/preset-2.jpeg',
+    description: '用户上传的形象照片 2',
   },
   {
     id: 'preset_3',
-    name: '图3 - 渐变版',
-    gradient: 'from-amber-400 via-pink-400 to-indigo-400',
-    description: '橙蓝渐变，品牌标识位明显',
+    name: '图 3',
+    image: '/agent-images/preset-3.jpeg',
+    thumbnail: '/agent-images/preset-3.jpeg',
+    description: '用户上传的形象照片 3',
   },
   {
     id: 'preset_4',
-    name: '图4 - 极简版',
-    gradient: 'from-slate-700 via-slate-500 to-slate-300',
-    description: '极简设计，Q版萌系，完美融合',
+    name: '图 4',
+    image: '/agent-images/preset-4.jpeg',
+    thumbnail: '/agent-images/preset-4.jpeg',
+    description: '用户上传的形象照片 4',
   },
 ]
 
