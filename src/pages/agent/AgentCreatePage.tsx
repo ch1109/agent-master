@@ -818,9 +818,9 @@ export function AgentCreatePage() {
                   </div>
                   <div className="space-y-2 rounded-xl border border-dashed border-[#e2e8f5] bg-white/60 p-3">
                     <p className="text-xs font-medium text-[#0f172a]">自定义风格标签（选填）</p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <input
-                        className={cn(baseInput, 'py-2 text-sm sm:w-auto sm:flex-1')}
+                        className={cn(baseInput, 'py-2 text-sm sm:w-auto sm:min-w-0 sm:flex-1')}
                         placeholder="填写你想要的独特风格，如 Vaporwave、莫奈油画..."
                         value={customVisualStyleInput}
                         onChange={(e) => setCustomVisualStyleInput(e.target.value)}
@@ -834,7 +834,7 @@ export function AgentCreatePage() {
                       <button
                         type="button"
                         onClick={() => addCustomTag('visualStyle')}
-                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3 py-2 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)] transition hover:brightness-105"
+                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3 py-2 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)] transition hover:brightness-105 sm:flex-none sm:self-stretch sm:whitespace-nowrap"
                       >
                         <Plus className="h-4 w-4" /> 添加
                       </button>
@@ -890,9 +890,9 @@ export function AgentCreatePage() {
                   </div>
                   <div className="space-y-2 rounded-xl border border-dashed border-[#e2e8f5] bg-white/60 p-3">
                     <p className="text-xs font-medium text-[#0f172a]">自定义角色形态（选填）</p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <input
-                        className={cn(baseInput, 'py-2 text-sm sm:w-auto sm:flex-1')}
+                        className={cn(baseInput, 'py-2 text-sm sm:w-auto sm:min-w-0 sm:flex-1')}
                         placeholder="例如：蒸汽朋克机械猫、乐高积木人..."
                         value={customCharacterFormInput}
                         onChange={(e) => setCustomCharacterFormInput(e.target.value)}
@@ -906,7 +906,7 @@ export function AgentCreatePage() {
                       <button
                         type="button"
                         onClick={() => addCustomTag('characterForm')}
-                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3 py-2 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)] transition hover:brightness-105"
+                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-3 py-2 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)] transition hover:brightness-105 sm:flex-none sm:self-stretch sm:whitespace-nowrap"
                       >
                         <Plus className="h-4 w-4" /> 添加
                       </button>
@@ -1539,21 +1539,7 @@ export function AgentCreatePage() {
               <h1 className="text-2xl font-semibold text-[#0f172a]">{showSuccess ? '创建完成' : '数字员工创建'}</h1>
               <p className="text-sm text-[#64748b]">{showSuccess ? '你的数字员工已成功创建并准备就绪' : '参考示例完成画像定义、形象生成、能力装配与记忆进化'}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-medium text-[#2563eb] shadow-[0_10px_18px_rgba(37,99,235,0.18)]">
-                <div className="h-2 w-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                <span>整体完成度 {overallProgress}%</span>
-              </div>
-              {!showSuccess && (
-                <button
-                  type="button"
-                  onClick={handleCompleteClick}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_26px_rgba(37,99,235,0.25)] transition hover:brightness-105"
-                >
-                  完成创建 <CheckCircle2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            <div className="flex items-center gap-3" />
           </div>
         </div>
 

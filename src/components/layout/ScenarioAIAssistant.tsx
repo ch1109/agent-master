@@ -114,7 +114,7 @@ export function ScenarioAIAssistant() {
     const { currentStage: agentStage, progress: agentProgress } = useAgentCreationStore.getState()
     // 优先看当前阶段；如已到能力或记忆阶段，跳过前序问答
     if (agentStage === 'stage4' || agentProgress.stage3 === 100 || agentProgress.stage4 > 0) return 10 // 记忆与进化
-    if (agentStage === 'stage3' || agentProgress.stage2 === 100) return 8 // 能力装配
+    if (agentStage === 'stage3' || agentProgress.stage2 === 100) return 7 // 形象完成后进入动作选择
     if (agentStage === 'stage2' || agentProgress.stage1 === 100) return 5 // 形象生成
     return 0 // 默认从画像定义开场
   }, [])

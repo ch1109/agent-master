@@ -37,7 +37,15 @@ const navGroups: NavGroup[] = [
   {
     title: '首页',
     items: [
-      { id: 'home-agent', label: '虚拟人 Agent 首页', icon: Home, href: '/home/agent', badge: '开发中' },
+      { id: 'home-agent', label: '虚拟人 Agent 首页', icon: Home, href: '/home/agent' },
+    ],
+  },
+  {
+    title: 'Agent 管理',
+    items: [
+      { id: 'agent-create', label: 'Agent 创建与配置', icon: Bot, href: '/agent/create' },
+      { id: 'agent-deploy', label: 'Agent 部署管理', icon: Shield, href: '/agent/deploy' },
+      { id: 'agent-monitor', label: 'Agent 监控', icon: Activity, href: '/agent/monitor' },
     ],
   },
   {
@@ -45,44 +53,36 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'intent', label: '意图配置', icon: MessageSquare, href: '/config/intent' },
       { id: 'ui', label: 'UI 配置', icon: Layers, href: '/config/ui' },
-      { id: 'dialog', label: '对话流程', icon: FileText, href: '/config/dialog', badge: '开发中' },
-      { id: 'knowledge', label: '知识库', icon: FileText, href: '/config/knowledge', badge: '开发中' },
+      { id: 'dialog', label: '对话流程', icon: FileText, href: '/config/dialog' },
+      { id: 'knowledge', label: '知识库', icon: FileText, href: '/config/knowledge' },
     ],
   },
   {
     title: 'Playground',
     items: [
       { id: 'prompt', label: '提示词优化', icon: Sparkles, href: '/playground/prompt' },
-      { id: 'prompt-test', label: '提示词测试', icon: Gauge, href: '/playground/prompt/test', badge: '开发中' },
-      { id: 'fewshot-library', label: 'Few-shot 示例库', icon: FileText, href: '/playground/fewshot/library', badge: '开发中' },
-      { id: 'prompt-version', label: '提示词版本管理', icon: Shield, href: '/playground/prompt/version', badge: '开发中' },
-      { id: 'test', label: '测试用例', icon: Settings2, href: '/playground/test', badge: '开发中' },
-      { id: 'badcase', label: 'Badcase 管理', icon: Activity, href: '/playground/badcase', badge: '开发中' },
+      { id: 'prompt-test', label: '提示词测试', icon: Gauge, href: '/playground/prompt/test' },
+      { id: 'fewshot-library', label: 'Few-shot 示例库', icon: FileText, href: '/playground/fewshot/library' },
+      { id: 'prompt-version', label: '提示词版本管理', icon: Shield, href: '/playground/prompt/version' },
+      { id: 'test', label: '测试用例', icon: Settings2, href: '/playground/test' },
+      { id: 'badcase', label: 'Badcase 管理', icon: Activity, href: '/playground/badcase' },
     ],
   },
   {
     title: '运行监控',
     items: [
-      { id: 'overview', label: '会话总览仪表盘', icon: Gauge, href: '/monitor/overview', badge: '开发中' },
-      { id: 'logs', label: '会话日志查询', icon: FileText, href: '/monitor/logs', badge: '开发中' },
-      { id: 'performance', label: '性能监控', icon: Gauge, href: '/monitor/performance', badge: '开发中' },
-    ],
-  },
-  {
-    title: 'Agent 管理',
-    items: [
-      { id: 'agent-create', label: 'Agent 创建与配置', icon: Bot, href: '/agent/create', badge: '开发中' },
-      { id: 'agent-deploy', label: 'Agent 部署管理', icon: Shield, href: '/agent/deploy', badge: '开发中' },
-      { id: 'agent-monitor', label: 'Agent 监控', icon: Activity, href: '/agent/monitor', badge: '开发中' },
+      { id: 'overview', label: '会话总览仪表盘', icon: Gauge, href: '/monitor/overview' },
+      { id: 'logs', label: '会话日志查询', icon: FileText, href: '/monitor/logs' },
+      { id: 'performance', label: '性能监控', icon: Gauge, href: '/monitor/performance' },
     ],
   },
   {
     title: '系统配置',
     items: [
-      { id: 'system-llm', label: 'LLM 模型配置', icon: Sliders, href: '/system/llm', badge: '开发中' },
-      { id: 'system-api', label: 'API 配置', icon: Cpu, href: '/system/api', badge: '开发中' },
-      { id: 'system-alert', label: '告警配置', icon: AlertCircle, href: '/system/alert', badge: '开发中' },
-      { id: 'system-tool', label: '工具配置', icon: Wrench, href: '/system/tool', badge: '开发中' },
+      { id: 'system-llm', label: 'LLM 模型配置', icon: Sliders, href: '/system/llm' },
+      { id: 'system-api', label: 'API 配置', icon: Cpu, href: '/system/api' },
+      { id: 'system-alert', label: '告警配置', icon: AlertCircle, href: '/system/alert' },
+      { id: 'system-tool', label: '工具配置', icon: Wrench, href: '/system/tool' },
     ],
   },
 ]
