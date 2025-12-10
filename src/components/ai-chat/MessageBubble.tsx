@@ -95,7 +95,7 @@ export function MessageBubble({ message, onOptionSelect, onActionClick, enableSt
   }, [id])
 
   // 只对助手消息且有文本内容时启用流式效果
-  const shouldStream = enableStreaming && isAssistant && content.text && !isRealTimeStreaming
+  const shouldStream = Boolean(enableStreaming && isAssistant && content.text && !isRealTimeStreaming)
 
   // 使用流式文本Hook
   const { displayedText, isComplete, isStreaming } = useStreamingText({
@@ -262,7 +262,7 @@ function OptionsCard({ options, onSelect }: { options: OptionItem[]; onSelect?: 
   return (
     <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] overflow-hidden shadow-sm">
       <div className="divide-y divide-[var(--border-subtle)]">
-        {options.map((option, index) => {
+        {options.map((option) => {
           const { emoji, text } = extractEmoji(option.label)
           return (
             <button
@@ -328,7 +328,7 @@ function ProgressCard({ stages }: { stages: ProgressStage[] }) {
     const timers: NodeJS.Timeout[] = []
 
     // 逐个设置阶段为running,然后completed
-    stages.forEach((stage, index) => {
+    stages.forEach((_, index) => {
       // 设置为running
       const runningTimer = setTimeout(() => {
         setAnimatedStages(prev =>
@@ -376,7 +376,7 @@ function ProgressCard({ stages }: { stages: ProgressStage[] }) {
           <div className="absolute left-3 top-6 bottom-6 w-0.5 bg-[var(--border-subtle)]" />
 
           <div className="space-y-4">
-            {animatedStages.map((stage, index) => (
+            {animatedStages.map((stage) => (
               <div key={stage.id} className="flex items-start gap-3 relative">
                 {/* 状态图标 */}
                 <div className={cn(

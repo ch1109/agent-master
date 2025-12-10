@@ -90,88 +90,91 @@ export function UIConfigPage() {
       {/* 页面列表 - 卡片网格布局 */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPages.map((page, index) => (
-            <div
-              key={page.id}
-              onClick={() => handlePageClick(page.id)}
-              onDoubleClick={() => handlePageDoubleClick(page.id)}
-              className={cn(
-                "group relative p-4 rounded-lg border transition-all cursor-pointer",
-                "animate-in fade-in slide-in-from-bottom-2",
-                selectedPage === page.id
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)]"
-                  : "border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)]",
-                highlightPageId === page.id && "ring-2 ring-[var(--color-success)] ring-offset-1 ring-offset-[var(--bg-base)]"
-              )}
-              style={{ animationDelay: `${index * 50}ms` }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handlePageDoubleClick(page.id)
-              }}
-            >
-              {/* 页面预览缩略图 */}
-              <div className="aspect-video rounded-md bg-[var(--bg-secondary)] mb-3 flex items-center justify-center border border-[var(--border-subtle)] overflow-hidden">
-                {page.thumbnail || page.screenshot ? (
-                  <img
-                    src={page.thumbnail || page.screenshot}
-                    alt={page.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Image className="w-8 h-8 text-[var(--text-disabled)]" />
+          {filteredPages.map((page, index) => {
+            const previewSrc = page.thumbnail ?? page.screenshot ?? undefined
+            return (
+              <div
+                key={page.id}
+                onClick={() => handlePageClick(page.id)}
+                onDoubleClick={() => handlePageDoubleClick(page.id)}
+                className={cn(
+                  "group relative p-4 rounded-lg border transition-all cursor-pointer",
+                  "animate-in fade-in slide-in-from-bottom-2",
+                  selectedPage === page.id
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)]"
+                    : "border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)]",
+                  highlightPageId === page.id && "ring-2 ring-[var(--color-success)] ring-offset-1 ring-offset-[var(--bg-base)]"
                 )}
-              </div>
-              
-              {/* 页面信息 */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-medium text-[var(--text-primary)]">{page.name}</h3>
-                  <p className="text-sm text-[var(--text-tertiary)] mt-0.5">{page.englishName}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {highlightPageId === page.id && (
-                    <Badge variant="outline">刚保存</Badge>
+                style={{ animationDelay: `${index * 50}ms` }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handlePageDoubleClick(page.id)
+                }}
+              >
+                {/* 页面预览缩略图 */}
+                <div className="aspect-video rounded-md bg-[var(--bg-secondary)] mb-3 flex items-center justify-center border border-[var(--border-subtle)] overflow-hidden">
+                  {previewSrc ? (
+                    <img
+                      src={previewSrc}
+                      alt={page.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image className="w-8 h-8 text-[var(--text-disabled)]" />
                   )}
-                  <Badge variant={page.status === 'configured' ? 'success' : 'warning'}>
-                  {page.status === 'configured' ? '已配置' : '待配置'}
-                  </Badge>
                 </div>
-              </div>
-              
-              {/* 底部信息 */}
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-subtle)]">
-                <span className="text-xs text-[var(--text-tertiary)]">
-                  更新于 {page.updatedAt}
-                </span>
-                <div className="relative">
-                  <button
-                    className="p-1 rounded-md hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setMenuOpenId(prev => prev === page.id ? null : page.id)
-                    }}
-                  >
-                    <MoreHorizontal className="w-4 h-4 text-[var(--text-tertiary)]" />
-                  </button>
-                  {menuOpenId === page.id && (
-                    <div
-                      className="absolute right-0 z-10 mt-2 w-32 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-lg"
-                      onClick={(e) => e.stopPropagation()}
+                
+                {/* 页面信息 */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium text-[var(--text-primary)]">{page.name}</h3>
+                    <p className="text-sm text-[var(--text-tertiary)] mt-0.5">{page.englishName}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {highlightPageId === page.id && (
+                      <Badge variant="outline">刚保存</Badge>
+                    )}
+                    <Badge variant={page.status === 'configured' ? 'success' : 'warning'}>
+                    {page.status === 'configured' ? '已配置' : '待配置'}
+                    </Badge>
+                  </div>
+                </div>
+                
+                {/* 底部信息 */}
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-subtle)]">
+                  <span className="text-xs text-[var(--text-tertiary)]">
+                    更新于 {page.updatedAt}
+                  </span>
+                  <div className="relative">
+                    <button
+                      className="p-1 rounded-md hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setMenuOpenId(prev => prev === page.id ? null : page.id)
+                      }}
                     >
-                      <button
-                        className="w-full px-3 py-2 text-sm text-left text-[var(--color-error)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
-                        onClick={() => handleDelete(page.id)}
+                      <MoreHorizontal className="w-4 h-4 text-[var(--text-tertiary)]" />
+                    </button>
+                    {menuOpenId === page.id && (
+                      <div
+                        className="absolute right-0 z-10 mt-2 w-32 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-lg"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Trash2 className="w-4 h-4" />
-                        删除页面
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          className="w-full px-3 py-2 text-sm text-left text-[var(--color-error)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                          onClick={() => handleDelete(page.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          删除页面
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

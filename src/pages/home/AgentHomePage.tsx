@@ -3,14 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
   BadgeCheck,
-  Bot,
   CalendarClock,
   ChevronRight,
   Cpu,
   Gauge,
   Mic,
   Send,
-  ShieldCheck,
   Sparkles,
   Zap
 } from 'lucide-react'
@@ -72,18 +70,7 @@ const suggestions = [
   '知识库更精准：新增 12 个产业案例卡片，建议触达银行业务组',
 ]
 
-const quickActions = [
-  { label: '生成日报', icon: Bot },
-  { label: '系统体检', icon: ShieldCheck },
-  { label: '调整算力', icon: Gauge },
-  { label: '查看 Badcase', icon: AlertCircle },
-  { label: '优化 Badcase', icon: AlertCircle },
-  { label: '运行状态总结', icon: Cpu },
-  { label: '你可以做什么', icon: Sparkles },
-  { label: '如何上传知识库', icon: ShieldCheck },
-]
-
-const virtualVideoSrc = new URL('../../../虚拟人视频.webm', import.meta.url).href
+const virtualVideoSrc = new URL('../../../摩尔线程虚拟人视频.webm', import.meta.url).href
 
 export function AgentHomePage() {
   const [inputText, setInputText] = useState('')
@@ -92,6 +79,7 @@ export function AgentHomePage() {
   const [isTyping, setIsTyping] = useState(false)
   const hasMessages = messages.length > 0
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const virtualVideoRef = useRef<HTMLVideoElement>(null)
   const navigate = useNavigate()
 
   const intentKeywords = ['帮我', '配置', '银行', '业务导航', '意图']
@@ -103,6 +91,21 @@ export function AgentHomePage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    const video = virtualVideoRef.current
+    if (!video) return
+    const handleSeamlessLoop = () => {
+      if (!video.duration) return
+      if (video.currentTime >= video.duration - 0.08) {
+        video.currentTime = 0.01
+        video.play().catch(() => {})
+      }
+    }
+    video.addEventListener('timeupdate', handleSeamlessLoop)
+    video.play().catch(() => {})
+    return () => video.removeEventListener('timeupdate', handleSeamlessLoop)
+  }, [])
 
   const generateAIResponse = (userMessage: string): string => {
     // 简单的模拟 AI 回复逻辑
@@ -457,13 +460,13 @@ export function AgentHomePage() {
                   }}
                 >
                   <div className="relative flex w-full max-w-[620px] items-center justify-center">
-                    <div className="relative w-full max-w-[600px] overflow-hidden rounded-[32px] bg-white/40 shadow-inner aspect-[3/4]">
+                    <div className="relative w-full max-w-[600px] overflow-hidden rounded-[32px] aspect-[3/4]">
                       <video
                         className="absolute inset-0 h-full w-full object-contain transition-all duration-500"
+                        ref={virtualVideoRef}
                         src={virtualVideoSrc}
                         autoPlay
                         muted
-                        loop
                         playsInline
                         preload="auto"
                         poster=""

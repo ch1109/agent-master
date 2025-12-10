@@ -12,7 +12,7 @@ export interface UIPageConfig {
   status: UIPageStatus
   updatedAt: string
   pageId?: string
-  thumbnail?: string
+  thumbnail?: string | null
   screenshot?: string | null
   supportedIntents?: string[]
   buttons?: { label: string; action: string }[]

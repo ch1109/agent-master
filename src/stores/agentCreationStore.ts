@@ -167,7 +167,7 @@ function computeStage4Progress(data: Stage4Memory) {
 }
 
 export const useAgentCreationStore = create<AgentCreationState>()(
-  devtools((set, get) => ({
+  devtools((set) => ({
     currentStage: 'stage1',
     stage1: initialStage1,
     stage2: initialStage2,

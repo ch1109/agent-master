@@ -6,11 +6,11 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { ConfigInput, ConfigTextarea, ConfigLabel, ConfigField } from '@/components/config'
+import { ConfigInput, ConfigTextarea, ConfigField } from '@/components/config'
 import { useHighlight } from '@/hooks/useHighlight'
 import { useAgentStore } from '@/stores/agentStore'
 import { cn } from '@/lib/utils'
-import { mockIntents, intentTypes, triggerTypes, aiGeneratedIntentConfig } from '@/data/intentMockData'
+import { mockIntents, intentTypes, aiGeneratedIntentConfig } from '@/data/intentMockData'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
 
@@ -390,7 +390,7 @@ export function IntentDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {triggerRules.map((rule, index) => (
+                  {triggerRules.map((rule) => (
                     <div key={rule.id} className="flex items-start gap-3 p-3 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg group">
                       <GripVertical className="w-4 h-4 text-[var(--text-tertiary)] mt-2 cursor-grab" />
                       <div className="flex-1 grid grid-cols-4 gap-3">
@@ -631,4 +631,3 @@ export function IntentDetailPage() {
 }
 
 export default IntentDetailPage
-

@@ -69,7 +69,13 @@ export function PromptOptimizePage() {
     navigate(`/playground/prompt/optimize/${selectedMode}?prompt=${selectedPrompt}`)
   }
 
-  const currentPromptContent = currentPrompt?.content || promptDiff.oldPrompt
+  const currentPromptContent = [
+    `【${currentPrompt?.name ?? '提示词'}】`,
+    `意图：${currentPrompt?.intent ?? '待补充'}`,
+    `版本：${currentPrompt?.version ?? '待定'}`,
+    '',
+    promptDiff.oldPrompt,
+  ].join('\n')
 
   return (
     <div className="h-full flex flex-col">

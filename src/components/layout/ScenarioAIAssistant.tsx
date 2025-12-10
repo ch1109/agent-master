@@ -36,7 +36,6 @@ export function ScenarioAIAssistant() {
   const [inputDisabled, setInputDisabled] = useState(false)
   const [useRealAI, setUseRealAI] = useState(false) // 是否使用真实 AI
   const [hasNavigatedToDetail, setHasNavigatedToDetail] = useState(false) // 是否已导航到详情页
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null) // 上传的图片 URL
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 获取调试选项
@@ -177,7 +176,6 @@ export function ScenarioAIAssistant() {
     // 如果有图片，先处理图片上传
     if (imageFile) {
       const imageUrl = URL.createObjectURL(imageFile)
-      setUploadedImageUrl(imageUrl)
 
       // 发送自定义事件到 UIDetailPage
       window.dispatchEvent(new CustomEvent('ai-upload-image', {
@@ -290,8 +288,6 @@ export function ScenarioAIAssistant() {
     // 如果有图片，先处理图片上传
     if (imageFile) {
       const imageUrl = URL.createObjectURL(imageFile)
-      setUploadedImageUrl(imageUrl)
-
       // 发送自定义事件到 UIDetailPage
       window.dispatchEvent(new CustomEvent('ai-upload-image', {
         detail: { imageUrl }
@@ -439,7 +435,6 @@ export function ScenarioAIAssistant() {
     setCurrentStep(0)
     setMessages([])
     setHasNavigatedToDetail(false) // 重置导航状态
-    setUploadedImageUrl(null) // 重置图片
     resetAIStream()
     // 触发重新初始化
     setTimeout(() => {
